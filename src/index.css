@@ -214,3 +214,73 @@
     @apply my-0;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Impressão de relatório.
+
+   O PDF não é gerado por biblioteca: o relatório já é HTML bem estruturado, e
+   o "Salvar como PDF" do navegador imprime melhor do que qualquer layout
+   remontado em coordenadas — acentuação, R$, quebra de linha e repetição de
+   cabeçalho saem de graça e continuam certos quando a tabela muda.
+
+   A regra é por VISIBILIDADE, não por display:none no resto da árvore. Esconder
+   o ancestral com display tiraria o documento do fluxo junto; `visibility`
+   apaga a casca e deixa o miolo imprimir no lugar dele.
+   --------------------------------------------------------------------------- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #report-doc,
+  #report-doc * {
+    visibility: visible;
+  }
+
+  #report-doc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  /* Estas tabelas têm de sete a nove colunas: em retrato o Produto vira uma
+     coluna de duas letras por linha. */
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  /* Sem isto o cabeçalho aparece só na primeira página e as demais viram uma
+     grade de números sem legenda — o defeito clássico de tabela longa impressa. */
+  #report-doc thead {
+    display: table-header-group;
+  }
+
+  #report-doc tr {
+    break-inside: avoid;
+  }
+
+  #report-doc .print-keep {
+    break-inside: avoid;
+  }
+
+  /* Fundos cinza do tema custam toner e deixam o texto sujo no papel. */
+  #report-doc * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  #report-doc th,
+  #report-doc td {
+    border-color: #d4d4d8 !important;
+    color: #18181b !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

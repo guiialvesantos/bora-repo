@@ -14,6 +14,7 @@ import Products from '@/pages/Products'
 import ProductAnalysis from '@/pages/ProductAnalysis'
 import Analysis from '@/pages/Analysis'
 import StalledProducts from '@/pages/StalledProducts'
+import Reports from '@/pages/Reports'
 import Team from '@/pages/Team'
 import Invite from '@/pages/Invite'
 import Import from '@/pages/Import'
@@ -97,6 +98,7 @@ export default function App() {
                     <Route path="produto" element={<ProductAnalysis />} />
                     <Route path="produto/:productId" element={<ProductAnalysis />} />
                   </Route>
+                  <Route path="/relatorios" element={<Reports />} />
                   <Route path="/equipe" element={<Team />} />
                   <Route path="/importar" element={<Import />} />
                   <Route path="/integracoes" element={<Integrations />} />
