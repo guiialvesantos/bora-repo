@@ -1,0 +1,63 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.110.2"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.110.2": "a764256c977bc03fc703d7b0031ac3138137a49b9f831775fd7a7f42019f652d"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@cloudflare/vite-plugin@^1.54.8",
+        "npm:@hookform/resolvers@^5.4.0",
+        "npm:@radix-ui/react-avatar@^1.1.10",
+        "npm:@radix-ui/react-checkbox@^1.3.3",
+        "npm:@radix-ui/react-context-menu@^2.2.16",
+        "npm:@radix-ui/react-dialog@^1.1.15",
+        "npm:@radix-ui/react-dropdown-menu@^2.1.16",
+        "npm:@radix-ui/react-label@^2.1.7",
+        "npm:@radix-ui/react-popover@^1.1.15",
+        "npm:@radix-ui/react-scroll-area@^1.2.10",
+        "npm:@radix-ui/react-select@^2.2.6",
+        "npm:@radix-ui/react-separator@^1.1.7",
+        "npm:@radix-ui/react-slot@^1.2.3",
+        "npm:@radix-ui/react-switch@^1.2.6",
+        "npm:@radix-ui/react-tabs@^1.1.13",
+        "npm:@radix-ui/react-tooltip@^1.2.8",
+        "npm:@supabase/supabase-js@^2.110.7",
+        "npm:@tanstack/react-query@^5.101.2",
+        "npm:@tanstack/react-table@^8.21.3",
+        "npm:@types/node@^24.13.3",
+        "npm:@types/papaparse@^5.3.16",
+        "npm:@types/react-dom@^19.2.3",
+        "npm:@types/react@^19.2.17",
+        "npm:@vitejs/plugin-react@^6.0.3",
+        "npm:autoprefixer@^10.5.4",
+        "npm:class-variance-authority@~0.7.1",
+        "npm:clsx@^2.1.1",
+        "npm:cmdk@^1.1.1",
+        "npm:date-fns@^4.4.0",
+        "npm:lucide-react@^1.24.0",
+        "npm:oxlint@^1.71.0",
+        "npm:papaparse@^5.5.3",
+        "npm:pg@^8.23.0",
+        "npm:postcss@^8.5.19",
+        "npm:react-dom@^19.2.7",
+        "npm:react-hook-form@^7.81.0",
+        "npm:react-router-dom@^7.18.1",
+        "npm:react@^19.2.7",
+        "npm:recharts@^3.10.1",
+        "npm:sonner@^2.0.7",
+        "npm:tailwind-merge@^3.6.0",
+        "npm:tailwindcss-animate@^1.0.7",
+        "npm:tailwindcss@^3.4.19",
+        "npm:typescript@~6.0.2",
+        "npm:vite@^8.1.1",
+        "npm:wrangler@^4.131.1",
+        "npm:xlsx@~0.18.5",
+        "npm:zod@^4.4.3"
+      ]
+    }
+  }
+}

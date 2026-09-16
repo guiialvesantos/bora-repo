@@ -1,0 +1,376 @@
+/* Design tokens — ReporIA sobre o Infinify Design System.
+ *
+ * O Infinify é um kit de fundação: nove ramps primitivos, uma camada semântica
+ * por PAPEL (BG/*, FG/*, Stroke/*), escala de 4px, raio com propósito por passo,
+ * seis degraus de sombra e cinco estados por componente. Adotamos a estrutura
+ * inteira. O que NÃO adotamos é a cor da marca dele: o `brand` do Infinify é
+ * azul #3478F6, e o ReporIA é verde.
+ *
+ * === As três regras que organizam este arquivo ===
+ *
+ * 1. O RAMP `brand` É O VERDE, e o passo 600 é a âncora.
+ *    No Infinify todo preenchimento interativo é o 600 com texto branco. O 600
+ *    aqui é `#055120`, escolhido pelo usuário: 9,5:1 com branco, AAA folgado, e
+ *    bem acima dos 3,6:1 do azul original. Por ser um verde escuro (17% de
+ *    luminosidade contra os 58% do azul), o ramp é assimétrico de propósito —
+ *    apertado embaixo, espaçado em cima. Está explicado no bloco do ramp.
+ *
+ * 2. O LIMA SAIU INTEIRO.
+ *    Ele tinha 67% de luminosidade — 1,6:1 sobre branco — e no modelo do
+ *    Infinify, onde o 600 precisa carregar texto branco, simplesmente não cabia.
+ *    Por um tempo sobrou aqui como acento de gráfico, mas acento que ninguém usa
+ *    é token morto: as séries agora saem do próprio ramp da marca e os
+ *    categóricos do Infinify (laranja/menta/teal/ciano) cobrem o resto. Se
+ *    voltar, volta como uma decisão, não como resto de mudança.
+ *
+ * 3. MONO É O DO INFINIFY, VERBATIM.
+ *    Ramp frio, com viés azul discreto no 600–1100 (#50545D, #3C4049). Quase
+ *    toda superfície e todo texto saem daqui. É o que faz a tela ser
+ *    branco-e-cinza com exatamente UM verde, que é a tese visual do sistema.
+ *
+ * Continua claro-only. O Infinify traz o tema Night pareado, e ele não está
+ * aqui de propósito — nunca foi pedido, e metade dos tokens abaixo não tem par
+ * escuro conferido.
+ */
+
+@layer base {
+  :root {
+    /* ==================================================================
+       PRIMITIVOS — os ramps. Nada nesta seção é referenciado direto pela
+       UI: quem a UI enxerga é a camada semântica lá embaixo.
+       ================================================================== */
+
+    /* Mono — 14 passos, do Infinify. Frio de propósito; não "corrigir". */
+    --mono-100: 0 0% 95%;
+    --mono-200: 180 2% 91%;
+    --mono-300: 210 2% 82%;
+    --mono-400: 240 2% 71%;
+    --mono-500: 216 2% 57%;
+    --mono-600: 222 8% 34%;
+    --mono-700: 222 10% 26%;
+    --mono-800: 220 10% 24%;
+    --mono-900: 222 9% 21%;
+    --mono-1000: 225 9% 17%;
+    --mono-1100: 220 10% 12%;
+    --mono-1150: 240 8% 5%;
+
+    /* A MARCA É VERDE. A INTERFACE NÃO É. Os dois verdes do ReporIA — o pinho
+       do ladrilho e o lima das três marcas — vivem aqui e SÓ são consumidos
+       pelo componente `Logo`. Nenhuma outra peça da tela pode referenciá-los:
+       foi exatamente por espalhar o verde por botão, menu e gráfico que a tela
+       ficou monocromática de marca. Verde é assinatura, não é vocabulário. */
+    --logo-pine: 160 75% 16%;
+    --logo-lime: 76 72% 70%;
+
+    /* Brand — a rampa de ACENTO. Carrega o nome `brand` porque é o que as ~18
+       telas já referenciam (`bg-brand-600`, `text-brand-600`, `bg-brand-100`),
+       mas o que ela guarda é AZUL, não o verde da logo.
+
+       É o azul do próprio Infinify (`#3478F6`, aqui no 500) — o brand original
+       da fonte, que eu tinha arrancado. A âncora de preenchimento, porém, é o
+       600 `#2563EB`: `#3478F6` dá 3,7:1 contra branco e reprova em AA num
+       rótulo de botão. O 600 dá 5,2:1 e é visualmente o mesmo azul.
+
+       SATURAÇÃO ALTA DE PROPÓSITO. A versão anterior desta rampa era um aço
+       dessaturado (`#386888`, S=42%) e o resultado foi "frio e sem graça" —
+       num painel de números, é o acento que carrega toda a vida da tela,
+       porque o resto é branco, cinza e tabela. Nenhum passo desta rampa desce
+       de 63% de saturação. */
+    --brand-100: 218 100% 97%;
+    --brand-200: 218 95% 93%;
+    --brand-300: 218 97% 87%;
+    --brand-400: 217 95% 74%;
+    --brand-500: 219 91% 58%;
+    --brand-600: 221 83% 53%;
+    --brand-700: 224 71% 48%;
+    --brand-800: 226 71% 40%;
+    --brand-900: 224 64% 33%;
+    --brand-1000: 224 65% 25%;
+    --brand-1100: 224 63% 17%;
+
+    /* Semânticos — do Infinify. Os passos 100–500 são tintas DESSATURADAS que
+       não ficam na mesma linha de matiz do 600+ (o warning corre pêssego
+       embaixo e ocre em cima). Isso é intencional na fonte. */
+    --error-100: 0 100% 96%;
+    --error-200: 0 95% 92%;
+    --error-300: 0 90% 84%;
+    --error-600: 0 88% 60%;
+    --error-700: 0 61% 46%;
+    --error-800: 0 61% 39%;
+    --error-900: 0 62% 30%;
+
+    --success-100: 130 26% 96%;
+    --success-200: 126 26% 93%;
+    --success-300: 128 29% 85%;
+    --success-600: 140 80% 36%;
+    --success-700: 140 80% 34%;
+    --success-800: 140 81% 31%;
+    --success-900: 140 80% 27%;
+
+    --warning-100: 29 53% 97%;
+    --warning-200: 25 55% 94%;
+    --warning-300: 25 54% 87%;
+    --warning-600: 37 88% 44%;
+    --warning-700: 37 89% 42%;
+    --warning-800: 37 89% 37%;
+    --warning-900: 37 89% 33%;
+
+    /* Categóricos. A fonte é explícita: "secondary color and doesn't connected
+       to anything". Existem para dado categórico — série de gráfico, tag — e
+       nunca recebem significado.
+
+       Cada um ganhou os três passos de lavagem (100/200/300) e os escuros de
+       texto (700/800/900), porque sem eles um categórico só sabe preencher e
+       não sabe virar CHIP: chip é lavagem clara com texto escuro do mesmo
+       matiz, e era a falta disso que fazia todo estado neutro da tela cair no
+       mesmo cinza. */
+    --orange-100: 33 100% 96%;
+    --orange-200: 33 100% 92%;
+    --orange-300: 31 97% 83%;
+    --orange-600: 24 91% 50%;
+    --orange-700: 21 90% 48%;
+    --orange-800: 17 88% 40%;
+    --orange-900: 15 79% 34%;
+
+    /* Violeta não vem do Infinify — a fonte tem oito rampas cromáticas e
+       nenhuma no roxo. Entrou porque cinco categorias precisam de cinco
+       matizes separáveis, e as que a fonte oferece ou são verdes (mint) ou
+       encostam no cyan (teal). Construída na mesma gramática: 600 é a âncora
+       de preenchimento, 100–300 são lavagem, 700–900 são texto. */
+    --violet-100: 250 100% 98%;
+    --violet-200: 251 91% 95%;
+    --violet-300: 251 95% 92%;
+    --violet-600: 258 90% 66%;
+    --violet-700: 263 83% 58%;
+    --violet-800: 263 70% 50%;
+    --violet-900: 263 69% 42%;
+
+    --mint-600: 176 46% 57%;
+    --teal-600: 193 47% 57%;
+    /* Cyan vem com a rampa INTEIRA porque acumulou dois papéis: o estado
+       neutro de badge ("enviado", "drop" — nem sucesso, nem aviso, nem erro) e,
+       agora, a série dos gráficos. O 600 é o `#5CACE1` da fonte, intacto: num
+       gráfico ele fica sobre branco e não precisa suportar texto em cima. */
+    --cyan-100: 210 57% 97%;
+    --cyan-200: 210 61% 95%;
+    --cyan-300: 210 63% 89%;
+    --cyan-400: 208 63% 83%;
+    --cyan-500: 207 66% 76%;
+    --cyan-600: 204 69% 62%;
+    --cyan-700: 204 61% 59%;
+    --cyan-800: 204 48% 53%;
+    --cyan-900: 204 42% 46%;
+    --cyan-1000: 204 42% 38%;
+    --cyan-1100: 204 42% 26%;
+
+    /* ==================================================================
+       SEMÂNTICO — o que a UI referencia. Nome por PAPEL, nunca por cor.
+       ================================================================== */
+
+    /* Superfícies. O fundo da página é `#F9FAFB`, escolhido pelo usuário — um
+       degrau acima do mono-100 do Infinify (#F3F3F3) e com um viés azul de
+       sobra, na mesma direção fria do ramp mono. Continua sendo MOLDURA: o
+       conteúdo todo mora em peça branca com fio de 1px sobre ele.
+
+       Só o canvas mudou. `surface-hover`, `muted` e `accent` seguem em mono-100
+       de propósito: são tinta SOBRE o branco do card, e se acompanhassem o
+       fundo ficariam claras demais para marcar uma linha sob o cursor. */
+    --background: 210 20% 98%;
+    --surface: 0 0% 100%;
+    --surface-subtle: var(--mono-100);
+    --surface-inset: 0 0% 97%;
+    --surface-hover: var(--mono-100);
+    --surface-selected: var(--brand-100);
+
+    /* Texto — dois passos de hierarquia, como manda a fonte: título escuro,
+       corpo em cinza mono-600. Cor nunca é hierarquia além desses dois. */
+    --text-primary: var(--mono-1150);
+    --text-secondary: var(--mono-600);
+    --text-tertiary: var(--mono-500);
+    --text-disabled: var(--mono-400);
+
+    /* Traços. São DOIS pesos, e confundi-los é o que deixa a tela pesada:
+       `stroke-secondary` (mono-200, #E8E9E9) é o fio de CONTORNO DE PAINÉL —
+       card, painel, barra lateral; `stroke-primary` (mono-300, #CFD0D1) é o fio
+       de CAMPO EDITÁVEL, onde a borda precisa se anunciar como alvo de clique.
+       O kit de dashboard do Infinify usa `stroke-secondary` em todo `.panel` e
+       `.rail`; usar mono-300 ali cobre a tela de linhas escuras.
+
+       `stroke-focus` é mono-1150: no Infinify o foco é um anel NEUTRO escuro,
+       não um halo da marca. É uma das escolhas mais distintivas do sistema. */
+    --border-default: var(--mono-200);
+    --border-strong: var(--mono-400);
+    --stroke-primary: var(--mono-300);
+    --stroke-secondary: var(--mono-200);
+    --stroke-strong: var(--mono-600);
+    --stroke-focus: var(--mono-1150);
+
+    /* Escada de primeiro plano da marca (FG/Brand/*). No Infinify ela é
+       1100 → 800 → 600 → 300; aqui está deslocada um passo para cima, e por um
+       motivo concreto: com o 600 já em 17% de luminosidade, o 800 (11%) usado
+       como texto lê PRETO, não verde. Ou seja, a escada original entregaria um
+       link que não parece da marca. Então o texto da marca é o próprio
+       `#055120`, e o escurecimento de hover vem do 800. */
+    --fg-brand-primary: var(--brand-1100);
+    --fg-brand-secondary: var(--brand-600);
+    --fg-brand-secondary-hover: var(--brand-800);
+    --fg-brand-tertiary: var(--brand-500);
+    --fg-brand-tertiary-hover: var(--brand-600);
+
+    /* Superfícies interativas da marca. Hover e active descem no ramp — nunca
+       opacidade, nunca escala. Disabled é substituição de cor, não opacidade. */
+    --brand-base: var(--brand-600);
+    --brand-base-hover: var(--brand-700);
+    --brand-base-active: var(--brand-900);
+    --brand-base-disabled: var(--brand-300);
+    --brand-tonal: var(--brand-200);
+    --brand-tonal-hover: var(--brand-300);
+    --brand-tonal-active: var(--brand-400);
+
+    /* Mono interativo — o botão neutro (Cancelar, filtros, chips). */
+    --mono-base: var(--mono-700);
+    --mono-base-hover: var(--mono-900);
+    --mono-base-active: var(--mono-1100);
+    --mono-tonal: var(--mono-200);
+    --mono-tonal-hover: var(--mono-300);
+    --mono-tonal-active: var(--mono-400);
+
+    /* Aliases herdados que o app inteiro já referencia. Sobrevivem apontando
+       para a nova escada — é o que evita reescrever 52 arquivos. */
+    --ink-500: var(--brand-500);
+    --ink-600: var(--brand-600);
+    --ink-700: var(--brand-700);
+    --ink-900: var(--brand-1100);
+    --brand-primary: var(--brand-600);
+    --brand-primary-hover: var(--brand-700);
+    --brand-soft: var(--brand-100);
+    --brand-navy: var(--brand-1100);
+    /* Cor de qualquer coisa clicável escrita em TEXTO. */
+    --interactive: var(--brand-600);
+    --link: var(--brand-600);
+    --link-hover: var(--brand-800);
+
+    /* Status. Agora saem dos ramps semânticos do Infinify em vez de serem
+       inventados: sucesso deixa de ser "tinta sobre lima" e passa a ser o
+       verde-sucesso de verdade, que não se confunde com a marca porque a
+       marca é teal (167°) e o sucesso é folha (140°). */
+    --success: var(--success-600);
+    --success-soft: var(--success-200);
+    --success-foreground: 0 0% 100%;
+    --warning: var(--warning-600);
+    --warning-soft: var(--warning-200);
+    --warning-foreground: var(--warning-900);
+    --danger: var(--error-600);
+    --danger-soft: var(--error-100);
+    --danger-foreground: 0 0% 100%;
+    --info: var(--brand-600);
+    --info-soft: var(--brand-100);
+
+    /* Aliases do shadcn */
+    --foreground: var(--text-primary);
+    --card: var(--surface);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface);
+    --popover-foreground: var(--text-primary);
+    /* O par assinatura mudou: era lima com texto tinta, agora é verde-600 com
+       texto branco. É o que o modelo do Infinify exige do passo 600. */
+    --primary: var(--brand-600);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--mono-tonal);
+    --secondary-foreground: var(--text-primary);
+    --muted: var(--mono-100);
+    --muted-foreground: var(--text-secondary);
+    --accent: var(--mono-100);
+    --accent-foreground: var(--text-primary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    /* `border` é o fio de painel (mono-200) e `input` o de campo (mono-300).
+       Eram o mesmo token, e é daí que vinha a sensação de tela riscada. */
+    --border: var(--stroke-secondary);
+    --input: var(--stroke-primary);
+    /* O anel de foco é neutro escuro, não da marca. Ver `stroke-focus`. */
+    --ring: var(--stroke-focus);
+
+    /* Raios. A assinatura do Infinify é um corte duro entre PÍLULA e retângulo
+       macio: botão, chip, badge e tab são `full`; card, menu, tooltip e campo
+       ficam em 8–16. Nada de arredondamento parcial, nada de canto cortado. */
+    --radius-0: 0px;
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    /* `radius-2-5` do Infinify. É o raio da LINHA DE NAVEGAÇÃO e do ladrilho
+       do logo (e, na fonte, de bottom sheet e popover). Fica entre o 8 do
+       campo e o 12 do menu, e é a única medida que a barra lateral usa. */
+    --radius-nav: 10px;
+    --radius-md: 12px;
+    /* 16 é o raio de card/painel do Infinify (`--radius-4`), e é o número que
+       o kit de dashboard usa em TODA superfície branca. Estava em 14. */
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
+    --radius-full: 99999px;
+    --radius: var(--radius-sm);
+
+    /* Sombras — as seis do Infinify, cinza neutro e baixa opacidade. Card leva
+       fio de 1px E a `sm`: no kit de dashboard toda superfície branca é
+       `border: 1px solid stroke-secondary` + `box-shadow: var(--shadow-sm)`, e
+       é essa sombra rasa que separa o painel do fundo cinza. O que a fonte
+       proíbe é fio somado a sombra PESADA, não a sombra rasa. */
+    --shadow-xs: 0 1px 2px rgb(12 12 14 / 0.05);
+    --shadow-sm: 0 1px 3px rgb(12 12 14 / 0.06), 0 1px 2px rgb(12 12 14 / 0.04);
+    --shadow-md: 0 4px 8px -2px rgb(12 12 14 / 0.08), 0 2px 4px -2px rgb(12 12 14 / 0.05);
+    --shadow-lg: 0 12px 16px -4px rgb(12 12 14 / 0.08), 0 4px 6px -2px rgb(12 12 14 / 0.04);
+    --shadow-xl: 0 20px 24px -4px rgb(12 12 14 / 0.09), 0 8px 8px -4px rgb(12 12 14 / 0.04);
+    --shadow-xxl: 0 24px 48px -12px rgb(12 12 14 / 0.18);
+    --shadow-button: 0 1px 2px rgb(12 12 14 / 0.06);
+    /* Foco de controle: 2px de respiro na cor do fundo e 2px de anel escuro. */
+    --shadow-button-focus: 0 0 0 2px hsl(var(--surface)), 0 0 0 4px hsl(var(--stroke-focus));
+    --shadow-input-active: 0 0 0 4px hsl(var(--mono-200));
+    --shadow-float: var(--shadow-xl);
+    --shadow-dropdown: var(--shadow-lg);
+    --shadow-modal: var(--shadow-xxl);
+
+    /* Movimento. Curto e sem mola: o sistema não tem coreografia de entrada,
+       só travessia de cor e de sombra. */
+    --duration-fast: 120ms;
+    --duration-normal: 180ms;
+    --duration-slow: 280ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+    --ease-out-soft: cubic-bezier(0.2, 0, 0.2, 1);
+
+    /* Ícone — moldura 24, traço 1,5. Densos usam 20; dentro de chip e badge, 16. */
+    --icon-size: 24px;
+    --icon-size-sm: 20px;
+    --icon-size-xs: 16px;
+    --icon-stroke: 1.5;
+
+    /* Layout. Alturas de controle compartilhadas por Button, Input e Select —
+       é o que mantém um filtro alinhado com o campo ao lado sem ajuste manual. */
+    --size-lg: 48px;
+    --size-default: 40px;
+    --size-sm: 32px;
+    --size-xs: 28px;
+    --control-height: var(--size-sm);
+    --row-compact: 32px;
+    --row-default: 40px;
+    --row-comfortable: 48px;
+    --global-nav-width: 52px;
+    --sidebar-width: 248px;
+    --task-drawer-width: 760px;
+
+    /* Navegação. O item ativo é lavagem tonal da marca com o rótulo no próprio
+       `#055120` — no Infinify o estado ativo é do ramp da marca, não uma pílula
+       branca como era antes. */
+    --sidebar-background: var(--surface);
+    --sidebar-foreground: var(--text-secondary);
+    --sidebar-accent: var(--brand-100);
+    --sidebar-accent-foreground: var(--brand-600);
+    --sidebar-border: var(--stroke-secondary);
+    --sidebar-ring: var(--stroke-focus);
+
+    --rail-background: 0 0% 100%;
+    --rail-foreground: var(--text-secondary);
+    --rail-accent: var(--brand-100);
+    --rail-accent-foreground: var(--brand-600);
+    --rail-border: var(--stroke-secondary);
+  }
+}

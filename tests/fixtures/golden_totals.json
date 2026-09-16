@@ -1,0 +1,57 @@
+{
+  "params": {
+    "lead_time_days": 80,
+    "lead_time_weeks": 11.428571428571429,
+    "min_sale_date": "2025-08-04",
+    "max_sale_date": "2026-08-03",
+    "service_level_c": 0.9,
+    "z_c": 1.2815515655446006,
+    "service_level_a": 0.975,
+    "z_a": 1.9599639845400536,
+    "service_level_b": 0.95,
+    "z_b": 1.6448536269514715,
+    "order_cycle_weeks": 16,
+    "cmv_pct": 0.2
+  },
+  "aggregates": {
+    "current": [
+      1117674,
+      223534.79999999984
+    ],
+    "discontinued": [
+      340498,
+      68099.6
+    ],
+    "active": [
+      777176,
+      155435.19999999984
+    ],
+    "safety": [
+      426670,
+      85334.00000000006
+    ],
+    "average": [
+      690367.5,
+      138073.50000000006
+    ],
+    "max_active": [
+      954065,
+      190813.00000000003
+    ],
+    "max_with_discontinued": [
+      1294563,
+      258912.60000000003
+    ]
+  },
+  "counts": {
+    "skus": 248,
+    "in_collection": 123,
+    "abc": {
+      "A": 20,
+      "B": 35,
+      "C": 68
+    },
+    "order_lines": 9,
+    "order_pieces": 283
+  }
+}

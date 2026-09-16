@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stock-linqer",
+  "compatibility_date": "2026-09-11",
+  "routes": [{ "pattern": "stock.linqer.com.br", "custom_domain": true }],
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "dist",
+    "not_found_handling": "single-page-application"
+  }
+}

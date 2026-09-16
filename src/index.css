@@ -1,0 +1,216 @@
+@import './styles/theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: Inter, 'Helvetica Neue', Arial, ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Todo título carrega −2% de tracking. É a única diferença tipográfica
+     estrutural entre título e corpo no Infinify: a família é a mesma, o que
+     muda é tamanho, peso e essa compressão. */
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    letter-spacing: -0.02em;
+  }
+
+  /* Número não troca de fonte — troca de numeral. O Infinify tem uma família
+     só, e Inter traz `tnum` desenhado, então a coluna de quantidade alinha
+     sozinha sem uma segunda fonte carregada só para isso. */
+  .tabular-nums,
+  .font-data {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Foco é um anel NEUTRO ESCURO, não um halo da marca. É uma das escolhas
+     mais distintivas do Infinify e vale a pena entender por quê: o halo
+     colorido some quando o elemento focado já é da cor da marca (um botão
+     verde com halo verde não mostra foco nenhum). Dois píxeis de respiro na
+     cor do fundo e dois de tinta funcionam sobre qualquer superfície. */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-button-focus);
+    border-radius: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Os papéis de texto (`text-page-title`, `text-card-title`, `text-label`,
+     `text-micro`…) vivem no `fontSize` do tailwind.config — cada um já carrega
+     tamanho, entrelinha, peso e tracking. Estavam redefinidos aqui também, e
+     como esta camada vem depois, era esta que ganhava: o título de página saía
+     em 17,5px em vez dos 24 do sistema. Uma definição só, no token.
+
+     `secondary-body` fica porque não existe lá: é 13px, o passo entre Small e
+     XSmall que o Infinify não nomeia mas que a tabela densa usa. */
+  .text-secondary-body {
+    @apply text-[13px] font-normal text-muted-foreground;
+  }
+
+  /* `.panel` do kit de dashboard, verbatim: branco, fio de 1px em mono-200,
+     raio 16, `shadow-sm`. As três coisas juntas — o fio sozinho dá desenho
+     técnico, a sombra sozinha dá borrão. Elevação maior (md/lg/xl) continua
+     reservada para o que flutua de verdade: menu, tooltip, popover, modal. */
+  .surface-panel {
+    @apply rounded-lg border border-border bg-surface shadow-card;
+  }
+
+  /* Filtro é pílula. O corte duro entre pílula e retângulo macio é a
+     assinatura do sistema: controle é pílula, contêiner é retângulo. */
+  .chip-trigger {
+    @apply h-8 w-auto max-w-[220px] gap-1.5 rounded-full border border-border bg-surface px-3 text-[13px] font-medium shadow-none transition-colors hover:border-border-strong hover:bg-mono-100 focus:ring-0 data-[state=open]:border-brand-600 data-[state=open]:bg-brand-100 data-[state=open]:text-brand-600;
+  }
+
+  .section-card {
+    @apply overflow-hidden rounded-lg border border-border bg-surface shadow-card;
+  }
+
+  /* Sem degradê. O único gradiente do sistema inteiro é o painel fotográfico
+     da tela de cadastro; em chrome de UI não existe nenhum. */
+  .soft-panel {
+    @apply rounded-lg border border-brand-200 bg-brand-100;
+  }
+
+  .control-compact {
+    height: var(--control-height);
+  }
+
+  .transition-ui {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-standard);
+  }
+}
+
+@layer components {
+  .rich-text {
+    @apply text-[13px] leading-relaxed text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .rich-text-editor {
+    @apply px-3 py-2;
+  }
+
+  .rich-text p {
+    @apply my-1.5;
+  }
+
+  .rich-text h1 {
+    @apply mb-2 mt-4 text-xl font-bold;
+  }
+
+  .rich-text h2 {
+    @apply mb-2 mt-4 text-base font-semibold;
+  }
+
+  .rich-text h3 {
+    @apply mb-1.5 mt-3 text-sm font-semibold;
+  }
+
+  .rich-text ul {
+    @apply my-2 list-disc pl-5;
+  }
+
+  .rich-text ol {
+    @apply my-2 list-decimal pl-5;
+  }
+
+  .rich-text blockquote {
+    @apply my-2 border-l-2 border-ink/40 pl-3 italic text-muted-foreground;
+  }
+
+  .rich-text code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[12px];
+  }
+
+  .rich-text pre {
+    @apply my-2 overflow-x-auto rounded-md bg-muted p-3;
+  }
+
+  .rich-text a {
+    @apply text-brand-600 underline underline-offset-2 hover:text-brand-900;
+  }
+
+  .rich-text li {
+    @apply my-0.5;
+  }
+
+  .rich-text del {
+    @apply line-through;
+  }
+
+  .rich-text hr {
+    @apply my-4 border-t border-border;
+  }
+
+  .rich-text img {
+    @apply my-2 max-w-full rounded-md;
+  }
+
+  .rich-text mark {
+    @apply rounded bg-warning/25 px-0.5 text-foreground;
+  }
+
+  .rich-text table {
+    @apply my-3 w-full table-fixed border-collapse overflow-hidden rounded-md;
+  }
+
+  .rich-text th {
+    @apply border bg-muted px-2 py-1.5 text-left text-xs font-semibold;
+  }
+
+  .rich-text td {
+    @apply min-w-20 border px-2 py-1.5 align-top;
+  }
+
+  .rich-text .selectedCell {
+    @apply bg-brand-100;
+  }
+
+  .rich-text .mention,
+  .rich-text [data-type='mention'] {
+    @apply rounded-full bg-brand-100 px-1.5 py-0.5 font-medium text-brand-600;
+  }
+
+  .rich-text .is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground;
+    content: attr(data-placeholder);
+  }
+
+  .rich-text-compact {
+    @apply line-clamp-3 text-[13px] text-muted-foreground;
+  }
+
+  .rich-text-compact > * {
+    @apply my-0;
+  }
+}
