@@ -15,6 +15,7 @@ import ProductAnalysis from '@/pages/ProductAnalysis'
 import Analysis from '@/pages/Analysis'
 import StalledProducts from '@/pages/StalledProducts'
 import Reports from '@/pages/Reports'
+import SettingsHub from '@/pages/SettingsHub'
 import Team from '@/pages/Team'
 import Invite from '@/pages/Invite'
 import Import from '@/pages/Import'
@@ -84,7 +85,6 @@ export default function App() {
                 <Route element={<ProtectedLayout />}>
                   <Route path="/" element={<Navigate to="/painel" replace />} />
                   <Route path="/painel" element={<Dashboard />} />
-                  <Route path="/saude-dos-dados" element={<DataHealth />} />
                   <Route path="/pedido" element={<PurchaseOrder />} />
                   <Route path="/curva-abc" element={<AbcCurve />} />
                   <Route path="/produtos" element={<Products />} />
@@ -99,10 +99,18 @@ export default function App() {
                     <Route path="produto/:productId" element={<ProductAnalysis />} />
                   </Route>
                   <Route path="/relatorios" element={<Reports />} />
-                  <Route path="/equipe" element={<Team />} />
-                  <Route path="/importar" element={<Import />} />
-                  <Route path="/integracoes" element={<Integrations />} />
-                  <Route path="/configuracoes" element={<Settings />} />
+                  {/* Rota SEM path: só veste estas cinco telas com o cabeçalho
+                      e a faixa de abas de Configurações. Os endereços seguem
+                      idênticos — `/integracoes` continua sendo `/integracoes`
+                      porque é para lá que a Edge Function do OAuth do Tiny
+                      devolve o usuário, com o caminho escrito no servidor. */}
+                  <Route element={<SettingsHub />}>
+                    <Route path="/configuracoes" element={<Settings />} />
+                    <Route path="/integracoes" element={<Integrations />} />
+                    <Route path="/importar" element={<Import />} />
+                    <Route path="/equipe" element={<Team />} />
+                    <Route path="/saude-dos-dados" element={<DataHealth />} />
+                  </Route>
                   <Route path="/documentacao" element={<Documentation />} />
                   <Route path="/documentacao/:slug" element={<Documentation />} />
                 </Route>

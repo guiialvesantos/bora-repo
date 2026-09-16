@@ -112,7 +112,7 @@ export default function Import() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-page-title">Importar</h1>
+          {/* Sem `h1`: o título e as abas são do `SettingsHub`. */}
           <p className="max-w-2xl text-sm text-muted-foreground">
             Os mesmos arquivos que hoje são colados na planilha. Cada importação substitui a
             fonte inteira — não existe importação parcial, porque meia base dá meio número e

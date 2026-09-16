@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  Activity,
   BarChart3,
   BookOpen,
   Boxes,
@@ -11,13 +10,10 @@ import {
   FileText,
   LogOut,
   Package,
-  Plug,
   Plus,
   Settings as SettingsIcon,
   ShoppingCart,
   TrendingDown,
-  Upload,
-  Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -39,6 +35,20 @@ const NEW_COMPANY = '__new__'
 /** A escolha de barra aberta ou fechada acompanha a pessoa, não a sessão. */
 const COLLAPSE_KEY = 'reporia:nav-collapsed'
 
+/**
+ * A barra é a lista do que se faz TODO DIA, e só isso.
+ *
+ * Saúde dos dados, Importar, Integrações e Equipe saíram daqui: são telas de
+ * montagem e de exceção — conecta-se uma integração uma vez, convida-se a
+ * equipe uma vez — e ocupavam linha do mesmo peso que Painel e Pedido de
+ * compra. Com doze itens, os seis que interessam ficavam diluídos no meio.
+ * Agora vivem como abas dentro de Configurações (`SettingsHub`), com os
+ * endereços intactos.
+ *
+ * Saúde dos dados em especial não perde alcance nenhum: o `DataHealthBanner`
+ * fica no topo de TODA rota e leva direto para ela — só que apenas quando há
+ * problema, que é exatamente quando alguém precisa dela.
+ */
 const NAV = [
   { to: '/painel', label: 'Painel', icon: Boxes },
   { to: '/pedido', label: 'Pedido de compra', icon: ShoppingCart },
@@ -46,11 +56,16 @@ const NAV = [
   { to: '/produtos', label: 'Produtos', icon: Package },
   { to: '/analise', label: 'Análise', icon: TrendingDown },
   { to: '/relatorios', label: 'Relatórios', icon: FileText },
-  { to: '/saude-dos-dados', label: 'Saúde dos dados', icon: Activity },
-  { to: '/importar', label: 'Importar', icon: Upload },
-  { to: '/integracoes', label: 'Integrações', icon: Plug },
-  { to: '/equipe', label: 'Equipe', icon: Users },
-  { to: '/configuracoes', label: 'Configurações', icon: SettingsIcon },
+  {
+    to: '/configuracoes',
+    label: 'Configurações',
+    icon: SettingsIcon,
+    // As abas do hub mantiveram os endereços antigos, que não descendem de
+    // `/configuracoes`. Sem declará-los aqui, quem estivesse em Integrações
+    // veria a barra inteira apagada — dentro de uma seção e sem nada aceso
+    // indicando qual.
+    owns: ['/integracoes', '/importar', '/equipe', '/saude-dos-dados'],
+  },
   { to: '/documentacao', label: 'Documentação', icon: BookOpen },
 ]
 
@@ -183,8 +198,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             função — e a função vira texto dentro do atributo. O item some de
             estilo inteiro, sem erro nenhum no console. */}
         <nav className="flex flex-1 flex-col gap-[4px]">
-          {NAV.map(({ to, label, icon: Icon }) => {
-            const isActive = pathname === to || pathname.startsWith(`${to}/`)
+          {NAV.map(({ to, label, icon: Icon, owns }) => {
+            const under = (p: string) => pathname === p || pathname.startsWith(`${p}/`)
+            const isActive = under(to) || (owns?.some(under) ?? false)
             return (
               <Tooltip key={to}>
                 <TooltipTrigger asChild>

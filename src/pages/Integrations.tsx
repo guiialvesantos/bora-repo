@@ -691,7 +691,7 @@ export default function Integrations() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-page-title">Integrações</h1>
+          {/* Sem `h1`: o título e as abas são do `SettingsHub`. */}
           <p className="max-w-2xl text-sm text-muted-foreground">
             Produtos, estoque e pedidos entram automaticamente pelas integrações conectadas.
           </p>

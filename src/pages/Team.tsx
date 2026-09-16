@@ -89,7 +89,7 @@ export default function Team() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-page-title">Equipe</h1>
+        {/* Sem `h1`: o título e as abas são do `SettingsHub`. */}
         <p className="max-w-2xl text-sm text-muted-foreground">
           Quem tem acesso a {company?.name ?? 'esta empresa'}. O convite é um link: quem abrir
           precisa entrar com o e-mail convidado para virar membro.

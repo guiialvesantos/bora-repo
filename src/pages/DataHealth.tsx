@@ -105,7 +105,7 @@ export default function DataHealth() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-page-title">Saúde dos dados</h1>
+        {/* Sem `h1`: o título e as abas são do `SettingsHub`. */}
         <p className="text-sm text-muted-foreground">
           De onde veio cada número e o que está faltando para o pedido sair certo.
         </p>
