@@ -29,7 +29,7 @@ export interface SyncRun {
  * `.maybeSingle()` porque nunca existiu conexão é o estado normal antes do
  * primeiro `connect` — não é erro, é tela vazia.
  */
-export function useIntegrationConnection(provider: 'tiny_v2' | 'tiny_v3' = 'tiny_v2') {
+export function useIntegrationConnection(provider: 'tiny_v2' | 'tiny_v3' | 'trier_sgf' = 'tiny_v2') {
   const { companyId } = useCompany()
 
   return useQuery({
@@ -106,6 +106,80 @@ export function useTinyConnect() {
       queryClient.invalidateQueries({ queryKey: ['integration-connection', companyId] })
       queryClient.invalidateQueries({ queryKey: ['sync-runs'] })
       queryClient.invalidateQueries({ queryKey: ['data-health', companyId] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Trier Sistemas — uma chave por loja
+// ---------------------------------------------------------------------------
+
+export interface TrierConnector {
+  id: string
+  label: string
+  warehouse_id: string
+  /** Começo da chave, em claro. Serve para reconhecer QUAL chave está naquele PC. */
+  key_prefix: string
+  cursors: Record<string, string>
+  last_seen_at: string | null
+  last_version: string | null
+  last_error: string | null
+  revoked_at: string | null
+  created_at: string
+}
+
+/**
+ * As colunas vêm listadas uma a uma porque `key_hash` NÃO tem grant para
+ * `authenticated` (0038) — um `select('*')` aqui falharia com "permission
+ * denied", que é exatamente o comportamento desejado.
+ */
+export function useTrierConnectors() {
+  const { companyId } = useCompany()
+
+  return useQuery({
+    queryKey: ['trier-connectors', companyId],
+    enabled: !!companyId,
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<TrierConnector[]> => {
+      const { data, error } = await supabase
+        .from('trier_connectors')
+        .select('id, label, warehouse_id, key_prefix, cursors, last_seen_at, last_version, last_error, revoked_at, created_at')
+        .eq('company_id', companyId!)
+        .is('revoked_at', null)
+        .order('created_at')
+      if (error) throw error
+      return (data ?? []) as TrierConnector[]
+    },
+  })
+}
+
+interface TrierAction {
+  action: 'issue' | 'revoke' | 'disconnect'
+  label?: string
+  connectorId?: string
+}
+
+export function useTrierConnect() {
+  const { companyId } = useCompany()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (body: TrierAction) => {
+      const { data, error } = await supabase.functions.invoke('trier-connect', {
+        body: { ...body, companyId },
+      })
+      if (error) {
+        const context = (error as { context?: Response }).context
+        const payload = await context?.json?.().catch(() => null)
+        throw new Error(payload?.error ? String(payload.error) : error.message)
+      }
+      if (data?.error) throw new Error(String(data.error))
+      return data as { key?: string }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trier-connectors', companyId] })
+      queryClient.invalidateQueries({ queryKey: ['integration-connection', companyId] })
+      queryClient.invalidateQueries({ queryKey: ['warehouses', companyId] })
     },
   })
 }

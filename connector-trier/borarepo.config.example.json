@@ -1,0 +1,11 @@
+{
+  "trierBaseUrl": "http://localhost:4647/sgfpod1",
+  "trierToken": "COLE-AQUI-O-TOKEN-DA-TRIER",
+  "ingestUrl": "https://rbcwyjxrswvdjlabswms.supabase.co/functions/v1/trier-ingest",
+  "connectorKey": "brtr_COLE-AQUI-A-CHAVE-GERADA-NO-BORAREPO",
+
+  "intervalMinutes": 15,
+  "pageSize": 500,
+  "overlapMinutes": 30,
+  "backfillMonths": 12
+}

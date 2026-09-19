@@ -3,18 +3,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, CircleSlash, Copy, Loader2,
-  Plus, RefreshCw, Warehouse, Webhook, XCircle,
+  Plus, RefreshCw, Store, Trash2, Warehouse, Webhook, XCircle,
 } from 'lucide-react'
 import olistLogo from '@/assets/olist-logo.svg'
+import trierLogo from '@/assets/trier-logo.png'
 import {
-  useIntegrationConnection, useSyncRuns, useTinyConnect,
-  type IntegrationConnection,
+  useIntegrationConnection, useSyncRuns, useTinyConnect, useTrierConnect, useTrierConnectors,
+  type IntegrationConnection, type TrierConnector,
 } from '@/hooks/useIntegrations'
 import { useCompany } from '@/contexts/CompanyContext'
 import { usePublishParams, useReplenishmentParams } from '@/hooks/useReplenishmentParams'
 import { supabase } from '@/lib/supabase'
 import { fetchAllRows } from '@/lib/paging'
 import { formatInt } from '@/lib/money'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -42,6 +44,11 @@ const PROVIDER_META: Record<Provider, { title: string; subtitle: string }> = {
     title: 'Tiny — API v3 (aplicativo)',
     subtitle: 'Conexão OAuth por aplicativo criado no painel do Tiny.',
   },
+}
+
+const TRIER_META = {
+  title: 'Trier Sistemas (SGF)',
+  subtitle: 'Farmácias. Uma chave por loja, lida por um conector dentro da farmácia.',
 }
 
 function dt(v: string | null) {
@@ -268,6 +275,246 @@ function ConnectionCard({
 }
 
 // ============================================================================
+// Trier Sistemas — uma chave por loja, lida pelo conector dentro da farmácia
+// ============================================================================
+
+/** Endereço que o conector instalado na farmácia usa para enviar os dados. */
+const TRIER_INGEST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trier-ingest`
+
+/** Depois disso sem notícia, o conector daquela loja provavelmente parou. */
+const TRIER_STALE_MS = 60 * 60 * 1000
+
+/**
+ * O diálogo tem dois estados porque a chave aparece **uma única vez**: só
+ * guardamos o hash, então reabrir a tela depois não a recupera. Fechar sem
+ * copiar significa revogar e gerar outra.
+ */
+function TrierStoreDialog({
+  open, onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+}) {
+  const trier = useTrierConnect()
+  const [label, setLabel] = useState('')
+  const [issuedKey, setIssuedKey] = useState<string | null>(null)
+
+  // Limpa ao fechar (e não ao abrir): a chave não pode sobreviver escondida no
+  // estado esperando a próxima abertura do diálogo.
+  function handleOpenChange(v: boolean) {
+    if (!v) { setLabel(''); setIssuedKey(null) }
+    onOpenChange(v)
+  }
+
+  function handleIssue() {
+    if (!label.trim()) { toast.error('Dê um nome para a loja.'); return }
+    trier.mutate({ action: 'issue', label: label.trim() }, {
+      onSuccess: (data) => {
+        const key = (data as { key?: string })?.key
+        if (!key) { toast.error('A resposta veio sem a chave. Tente de novo.'); return }
+        setIssuedKey(key)
+      },
+      onError: (e) => toast.error(e.message),
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <img src={trierLogo} alt="Trier Sistemas" className="h-5 w-auto" /> Adicionar loja
+          </DialogTitle>
+          <DialogDescription>
+            {issuedKey
+              ? 'Copie a chave agora e cole no arquivo de configuração do conector, na farmácia.'
+              : 'Cada instalação do SGF é uma loja e tem a sua própria chave e o seu próprio depósito no BoraRepô.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {issuedKey ? (
+          <div className="space-y-4">
+            <CopyField
+              label="connectorKey"
+              value={issuedKey}
+              hint="Esta chave não volta a aparecer. Se perder, revogue esta loja e gere outra."
+            />
+            <CopyField
+              label="ingestUrl"
+              value={TRIER_INGEST_URL}
+              hint="Os dois valores vão no borarepo.config.json, na pasta do conector."
+            />
+            <div className="flex justify-end">
+              <Button onClick={() => handleOpenChange(false)}>Já copiei</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="trier-label">Nome da loja</Label>
+              <Input
+                id="trier-label"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Ex.: Matriz — Centro"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Vira também o nome do depósito desta loja, em Depósitos.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleIssue} disabled={trier.isPending}>
+                {trier.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Gerar chave
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * `now` vem do `dataUpdatedAt` da consulta, não de `Date.now()`: a lista
+ * recarrega sozinha a cada 30s, então comparar com o instante da busca dá o
+ * mesmo resultado e mantém a renderização pura (o vermelho não pisca sozinho
+ * no meio de um re-render qualquer).
+ */
+function TrierConnectorRow({ c, now }: { c: TrierConnector; now: number }) {
+  const trier = useTrierConnect()
+  const seenAt = c.last_seen_at ? new Date(c.last_seen_at).getTime() : null
+  const stale = seenAt === null || now - seenAt > TRIER_STALE_MS
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{c.label}</TableCell>
+      <TableCell className="font-mono text-xs text-muted-foreground">{c.key_prefix}…</TableCell>
+      <TableCell className="tabular-nums">
+        <span className={stale ? 'text-destructive' : undefined}>{dt(c.last_seen_at)}</span>
+      </TableCell>
+      <TableCell className="text-muted-foreground">{c.last_version ?? '—'}</TableCell>
+      <TableCell className="max-w-xs truncate text-muted-foreground">{c.last_error ?? '—'}</TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive"
+          disabled={trier.isPending}
+          aria-label={`Revogar a chave de ${c.label}`}
+          onClick={() => {
+            if (!window.confirm(
+              `Revogar a chave de "${c.label}"? O conector daquela loja para de enviar dados na hora. Os dados já recebidos permanecem.`,
+            )) return
+            trier.mutate({ action: 'revoke', connectorId: c.id }, {
+              onSuccess: () => toast.success('Chave revogada.'),
+              onError: (e) => toast.error(e.message),
+            })
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+function TrierCard({ conn, onAddStore }: { conn: IntegrationConnection; onAddStore: () => void }) {
+  const trier = useTrierConnect()
+  const { data: connectors, dataUpdatedAt } = useTrierConnectors()
+  const [showTech, setShowTech] = useState(false)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <img src={trierLogo} alt="Trier Sistemas" className="h-5 w-auto" /> {TRIER_META.title}
+          <StatusBadge conn={conn} />
+        </CardTitle>
+        <CardDescription>{TRIER_META.subtitle}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {conn.last_error && (
+          <div className="flex items-start gap-2 rounded-md border border-error-300 bg-error-100 p-3 text-sm">
+            <CircleSlash className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <span>{conn.last_error}</span>
+          </div>
+        )}
+
+        {!connectors || connectors.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma loja ainda. Gere uma chave e cole no conector instalado na farmácia.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Loja</TableHead>
+                <TableHead>Chave</TableHead>
+                <TableHead>Última vez visto</TableHead>
+                <TableHead>Versão</TableHead>
+                <TableHead>Último erro</TableHead>
+                <TableHead className="text-right">Revogar</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {connectors.map((c) => <TrierConnectorRow key={c.id} c={c} now={dataUpdatedAt} />)}
+            </TableBody>
+          </Table>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={onAddStore} disabled={trier.isPending}>
+            <Store className="h-3.5 w-3.5" /> Adicionar loja
+          </Button>
+          <Button
+            size="sm" variant="ghost" className="text-destructive" disabled={trier.isPending}
+            onClick={() => {
+              if (!window.confirm(
+                'Desconectar a Trier revoga as chaves de todas as lojas. Os dados já recebidos permanecem.',
+              )) return
+              trier.mutate({ action: 'disconnect' }, {
+                onSuccess: () => toast.success('Desconectado. Os dados já sincronizados permanecem.'),
+                onError: (e) => toast.error(e.message),
+              })
+            }}
+          >
+            Desconectar
+          </Button>
+          {conn.connected_at && (
+            <span className="text-xs text-muted-foreground">
+              Primeiro envio recebido em {dt(conn.connected_at)}
+            </span>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-border">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50"
+            onClick={() => setShowTech((v) => !v)}
+          >
+            {showTech ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <Webhook className="h-4 w-4 text-muted-foreground" /> Conector e dados técnicos
+          </button>
+          {showTech && (
+            <div className="space-y-4 border-t border-border p-3">
+              <CopyField
+                label="ingestUrl"
+                value={TRIER_INGEST_URL}
+                hint="Vai no borarepo.config.json do conector. O conector lê o SGF em http://localhost:4647 dentro da loja e envia para cá por HTTPS — nenhuma porta é aberta na farmácia e o token da Trier não sai de lá."
+              />
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ============================================================================
 // Depósitos — quais contam como estoque disponível
 // ============================================================================
 
@@ -463,12 +710,14 @@ function WarehousesCard() {
 // ============================================================================
 
 function AddIntegrationDialog({
-  open, onOpenChange, available, initialProvider,
+  open, onOpenChange, available, initialProvider, trierAvailable, onPickTrier,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   available: Provider[]
   initialProvider: Provider | null
+  trierAvailable: boolean
+  onPickTrier: () => void
 }) {
   const tiny = useTinyConnect()
   const [provider, setProvider] = useState<Provider | null>(initialProvider)
@@ -526,7 +775,7 @@ function AddIntegrationDialog({
               <DialogDescription>Escolha o que você quer conectar.</DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
-              {available.length === 0 && (
+              {available.length === 0 && !trierAvailable && (
                 <p className="text-sm text-muted-foreground">
                   Todas as integrações disponíveis já foram adicionadas.
                 </p>
@@ -545,6 +794,19 @@ function AddIntegrationDialog({
                   </span>
                 </button>
               ))}
+              {trierAvailable && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left hover:border-brand-600 hover:bg-mono-100"
+                  onClick={onPickTrier}
+                >
+                  <img src={trierLogo} alt="Trier Sistemas" className="h-6 w-auto" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{TRIER_META.title}</span>
+                    <span className="block text-xs text-muted-foreground">{TRIER_META.subtitle}</span>
+                  </span>
+                </button>
+              )}
             </div>
           </>
         ) : provider === 'tiny_v2' ? (
@@ -657,8 +919,10 @@ function AddIntegrationDialog({
 export default function Integrations() {
   const { data: v2conn, isLoading: v2Loading } = useIntegrationConnection('tiny_v2')
   const { data: v3conn, isLoading: v3Loading } = useIntegrationConnection('tiny_v3')
+  const { data: trierConn, isLoading: trierLoading } = useIntegrationConnection('trier_sgf')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogProvider, setDialogProvider] = useState<Provider | null>(null)
+  const [trierStoreOpen, setTrierStoreOpen] = useState(false)
 
   // Volta do consentimento no Tiny: o callback redireciona para cá com
   // ?tiny_v3=connected|error. Só avisa e limpa a URL — o estado real vem do
@@ -674,13 +938,14 @@ export default function Integrations() {
     window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`)
   }, [])
 
-  const loading = v2Loading || v3Loading
+  const loading = v2Loading || v3Loading || trierLoading
   // Uma integração só aparece na lista depois de adicionada (linha no banco).
   const added: { provider: Provider; conn: IntegrationConnection }[] = []
   if (v2conn) added.push({ provider: 'tiny_v2', conn: v2conn })
   if (v3conn) added.push({ provider: 'tiny_v3', conn: v3conn })
   const available = (['tiny_v2', 'tiny_v3'] as Provider[])
     .filter((p) => !added.some((a) => a.provider === p))
+  const empty = added.length === 0 && !trierConn
 
   function openAdd(provider: Provider | null) {
     setDialogProvider(provider)
@@ -701,14 +966,22 @@ export default function Integrations() {
         </Button>
       </div>
 
-      {loading ? null : added.length === 0 ? (
+      {/* Era `null`: enquanto as duas consultas respondiam, a página tinha só o
+          cabeçalho e um botão pairando sobre o branco, e logo depois nascia um
+          cartão inteiro embaixo. Agora a espera ocupa o lugar que o conteúdo
+          vai ocupar, em vez de a página pular. */}
+      {loading ? <LoadingBlock /> : empty ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <img src={olistLogo} alt="Olist" className="h-8 w-auto opacity-60" />
+            <div className="flex items-center gap-4 opacity-60">
+              <img src={olistLogo} alt="Olist" className="h-8 w-auto" />
+              <img src={trierLogo} alt="Trier Sistemas" className="h-8 w-auto" />
+            </div>
             <div>
               <p className="font-medium">Nenhuma integração adicionada</p>
               <p className="text-sm text-muted-foreground">
-                Conecte o Tiny (Olist) para sincronizar produtos, estoque e pedidos automaticamente.
+                Conecte o Tiny (Olist) ou a Trier Sistemas para sincronizar produtos, estoque e
+                pedidos automaticamente.
               </p>
             </div>
             <Button onClick={() => openAdd(null)}>
@@ -717,14 +990,19 @@ export default function Integrations() {
           </CardContent>
         </Card>
       ) : (
-        added.map(({ provider, conn }) => (
-          <ConnectionCard
-            key={provider}
-            provider={provider}
-            conn={conn}
-            onReconnect={() => openAdd(provider)}
-          />
-        ))
+        <>
+          {added.map(({ provider, conn }) => (
+            <ConnectionCard
+              key={provider}
+              provider={provider}
+              conn={conn}
+              onReconnect={() => openAdd(provider)}
+            />
+          ))}
+          {trierConn && (
+            <TrierCard conn={trierConn} onAddStore={() => setTrierStoreOpen(true)} />
+          )}
+        </>
       )}
 
       <WarehousesCard />
@@ -734,7 +1012,10 @@ export default function Integrations() {
         onOpenChange={setDialogOpen}
         available={available}
         initialProvider={dialogProvider}
+        trierAvailable={!trierConn}
+        onPickTrier={() => { setDialogOpen(false); setTrierStoreOpen(true) }}
       />
+      <TrierStoreDialog open={trierStoreOpen} onOpenChange={setTrierStoreOpen} />
     </div>
   )
 }
