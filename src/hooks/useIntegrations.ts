@@ -69,8 +69,10 @@ export function useSyncRuns(connectionId: string | null) {
 
 interface TinyAction {
   action:
-    | 'connect' | 'test' | 'disconnect' | 'settings' | 'sync_now'
+    | 'connect' | 'test' | 'disconnect' | 'remove' | 'settings' | 'sync_now'
     | 'oauth_init' | 'oauth_test' | 'oauth_disconnect'
+  /** Só em `remove`: qual das duas conexões apagar. */
+  provider?: 'tiny_v2' | 'tiny_v3'
   token?: string
   clientId?: string
   clientSecret?: string
@@ -154,7 +156,7 @@ export function useTrierConnectors() {
 }
 
 interface TrierAction {
-  action: 'issue' | 'revoke' | 'disconnect'
+  action: 'issue' | 'revoke' | 'disconnect' | 'remove'
   label?: string
   connectorId?: string
 }

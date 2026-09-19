@@ -13,6 +13,7 @@
 //   { action: 'connect',    companyId, token, settings? }
 //   { action: 'test',       companyId }
 //   { action: 'disconnect', companyId }
+//   { action: 'remove',     companyId, provider }   ← apaga a conexão
 //   { action: 'settings',   companyId, settings }
 //   { action: 'sync_now',   companyId }
 //   { action: 'oauth_init',       companyId, clientId, clientSecret }  → authorizeUrl
@@ -258,6 +259,27 @@ Deno.serve(async (req) => {
       await admin.from('integration_connections').update({
         status: 'connected', last_error: null,
       }).eq('id', v3conn.id)
+      return json({ ok: true })
+    }
+
+    // Apagar é diferente de desconectar: `disconnect` deixa a linha lá, com
+    // status `disconnected`, e a integração continua listada na tela esperando
+    // um "Reconectar". `remove` tira a integração da empresa — e as chaves
+    // estrangeiras de 0009 fazem o resto cair junto em cascata (segredo, fila,
+    // execuções, eventos de webhook). Produto, estoque e venda ficam: eles
+    // apontam para a empresa, não para a conexão, e jogar fora o histórico
+    // porque alguém trocou de ERP seria a decisão errada tomada por engano.
+    if (action === 'remove') {
+      const provider = String(body.provider ?? 'tiny_v2')
+      if (provider !== 'tiny_v2' && provider !== 'tiny_v3') {
+        return json({ error: 'Provedor inválido' }, 400)
+      }
+      const { error } = await admin
+        .from('integration_connections')
+        .delete()
+        .eq('company_id', companyId)
+        .eq('provider', provider)
+      if (error) throw error
       return json({ ok: true })
     }
 

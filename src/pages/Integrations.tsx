@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, CircleSlash, Copy, Loader2,
-  Plus, RefreshCw, Store, Trash2, Warehouse, Webhook, XCircle,
+  Pencil, Plus, RefreshCw, Store, Trash2, Webhook, XCircle,
 } from 'lucide-react'
 import olistLogo from '@/assets/olist-logo.svg'
 import trierLogo from '@/assets/trier-logo.png'
@@ -11,13 +10,8 @@ import {
   useIntegrationConnection, useSyncRuns, useTinyConnect, useTrierConnect, useTrierConnectors,
   type IntegrationConnection, type TrierConnector,
 } from '@/hooks/useIntegrations'
-import { useCompany } from '@/contexts/CompanyContext'
-import { usePublishParams, useReplenishmentParams } from '@/hooks/useReplenishmentParams'
-import { supabase } from '@/lib/supabase'
-import { fetchAllRows } from '@/lib/paging'
 import { formatInt } from '@/lib/money'
 import { LoadingBlock } from '@/components/brand/Logo'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -123,7 +117,7 @@ function ConnectionCard({
 }) {
   const tiny = useTinyConnect()
   const { data: runs } = useSyncRuns(provider === 'tiny_v2' ? conn.id : null)
-  const [showTech, setShowTech] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [showRuns, setShowRuns] = useState(false)
   const meta = PROVIDER_META[provider]
   const connected = conn.status === 'connected'
@@ -132,6 +126,17 @@ function ConnectionCard({
   function run(action: 'test' | 'sync_now' | 'disconnect' | 'oauth_test' | 'oauth_disconnect', ok: string) {
     tiny.mutate({ action }, {
       onSuccess: () => toast.success(ok),
+      onError: (e) => toast.error(e.message),
+    })
+  }
+
+  function remove() {
+    if (!window.confirm(
+      `Excluir a integração ${meta.title}? Ela sai da lista e as credenciais são apagadas. `
+      + 'Produtos, estoque e vendas já sincronizados permanecem.',
+    )) return
+    tiny.mutate({ action: 'remove', provider }, {
+      onSuccess: () => toast.success('Integração excluída.'),
       onError: (e) => toast.error(e.message),
     })
   }
@@ -190,35 +195,43 @@ function ConnectionCard({
               Reconectar
             </Button>
           )}
+          <Button
+            size="sm" variant="outline" disabled={tiny.isPending}
+            onClick={() => setEditing((v) => !v)}
+          >
+            <Pencil className="h-3.5 w-3.5" /> {editing ? 'Fechar' : 'Editar'}
+          </Button>
+          <Button
+            size="sm" variant="ghost" className="text-destructive"
+            disabled={tiny.isPending} onClick={remove}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Excluir
+          </Button>
         </div>
 
-        {/* Dados técnicos ficam escondidos por padrão — só quem precisa abre. */}
-        <div className="rounded-lg border border-border">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50"
-            onClick={() => setShowTech((v) => !v)}
-          >
-            {showTech ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            <Webhook className="h-4 w-4 text-muted-foreground" /> Webhook e dados técnicos
-          </button>
-          {showTech && (
-            <div className="space-y-4 border-t border-border p-3">
+        {/* A URL do webhook é cadastrada uma vez, no dia em que se conecta, e
+            depois nunca mais. Deixá-la sempre à mostra — mesmo dobrada — fazia
+            a tela parecer ter mais configuração do que tem. Agora é preciso
+            pedir para ver. */}
+        {editing && (
+          <div className="space-y-4 rounded-lg border border-border p-3">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Webhook className="h-4 w-4 text-muted-foreground" /> Webhook e dados técnicos
+            </p>
+            <CopyField
+              label="URL do webhook (receber pedidos e estoque)"
+              value={webhookUrl}
+              hint="Cadastre esta URL no Tiny em Configurações → Geral → API Web Services → Avisos automáticos (webhooks), para pedidos e estoque. Cada evento recebido entra na fila e é sincronizado em segundos."
+            />
+            {provider === 'tiny_v3' && (
               <CopyField
-                label="URL do webhook (receber pedidos e estoque)"
-                value={webhookUrl}
-                hint="Cadastre esta URL no Tiny em Configurações → Geral → API Web Services → Avisos automáticos (webhooks), para pedidos e estoque. Cada evento recebido entra na fila e é sincronizado em segundos."
+                label="URL de redirecionamento (OAuth)"
+                value={OAUTH_REDIRECT_URL}
+                hint="É a URL cadastrada no aplicativo criado no painel do Tiny."
               />
-              {provider === 'tiny_v3' && (
-                <CopyField
-                  label="URL de redirecionamento (OAuth)"
-                  value={OAUTH_REDIRECT_URL}
-                  hint="É a URL cadastrada no aplicativo criado no painel do Tiny."
-                />
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {provider === 'tiny_v2' && connected && (
           <div className="rounded-lg border border-border">
@@ -424,7 +437,7 @@ function TrierConnectorRow({ c, now }: { c: TrierConnector; now: number }) {
 function TrierCard({ conn, onAddStore }: { conn: IntegrationConnection; onAddStore: () => void }) {
   const trier = useTrierConnect()
   const { data: connectors, dataUpdatedAt } = useTrierConnectors()
-  const [showTech, setShowTech] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   return (
     <Card>
@@ -483,6 +496,28 @@ function TrierCard({ conn, onAddStore }: { conn: IntegrationConnection; onAddSto
           >
             Desconectar
           </Button>
+          <Button
+            size="sm" variant="outline" disabled={trier.isPending}
+            onClick={() => setEditing((v) => !v)}
+          >
+            <Pencil className="h-3.5 w-3.5" /> {editing ? 'Fechar' : 'Editar'}
+          </Button>
+          <Button
+            size="sm" variant="ghost" className="text-destructive" disabled={trier.isPending}
+            onClick={() => {
+              if (!window.confirm(
+                'Excluir a integração Trier Sistemas? Todas as chaves são apagadas junto e os '
+                + 'conectores param de enviar. Os depósitos das lojas e os dados já recebidos '
+                + 'permanecem.',
+              )) return
+              trier.mutate({ action: 'remove' }, {
+                onSuccess: () => toast.success('Integração excluída.'),
+                onError: (e) => toast.error(e.message),
+              })
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Excluir
+          </Button>
           {conn.connected_at && (
             <span className="text-xs text-muted-foreground">
               Primeiro envio recebido em {dt(conn.connected_at)}
@@ -490,216 +525,18 @@ function TrierCard({ conn, onAddStore }: { conn: IntegrationConnection; onAddSto
           )}
         </div>
 
-        <div className="rounded-lg border border-border">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50"
-            onClick={() => setShowTech((v) => !v)}
-          >
-            {showTech ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            <Webhook className="h-4 w-4 text-muted-foreground" /> Conector e dados técnicos
-          </button>
-          {showTech && (
-            <div className="space-y-4 border-t border-border p-3">
-              <CopyField
-                label="ingestUrl"
-                value={TRIER_INGEST_URL}
-                hint="Vai no borarepo.config.json do conector. O conector lê o SGF em http://localhost:4647 dentro da loja e envia para cá por HTTPS — nenhuma porta é aberta na farmácia e o token da Trier não sai de lá."
-              />
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ============================================================================
-// Depósitos — quais contam como estoque disponível
-// ============================================================================
-
-interface WarehouseRow {
-  id: string
-  name: string
-  include_in_available: boolean
-}
-
-/**
- * Base do `E` do motor: saldo físico ou disponível para venda (saldo −
- * reservas de pedidos em aberto). É parâmetro versionado do motor, não flag
- * de depósito — mudar a base muda pedido de compra, então a troca publica
- * uma versão nova de parâmetros e recalcula na hora (snapshot auditável).
- */
-function StockBasisToggle() {
-  const { data: params } = useReplenishmentParams()
-  const publish = usePublishParams()
-
-  // Empresa sem parâmetros ainda não roda o motor — nada a escolher.
-  if (!params) return null
-  const disponivel = params.stock_basis === 'disponivel'
-
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
-      <div>
-        <p className="text-sm font-medium">Descontar reservas do estoque</p>
-        <p className="text-xs text-muted-foreground">
-          Peças já vendidas e ainda não expedidas (reservadas em pedidos em aberto) deixam de
-          contar como estoque no cálculo — o motor passa a usar o disponível para venda.
-          A troca recalcula na hora e fica registrada no histórico de parâmetros.
-        </p>
-      </div>
-      <Switch
-        checked={disponivel}
-        disabled={publish.isPending}
-        aria-label="Descontar reservas do estoque"
-        onCheckedChange={(value) => {
-          publish.mutate(
-            {
-              patch: { stock_basis: value ? 'disponivel' : 'saldo' },
-              note: value
-                ? 'Estoque passa a descontar reservas (disponível para venda)'
-                : 'Estoque volta ao saldo físico (sem descontar reservas)',
-            },
-            {
-              onSuccess: () => toast.success('Base do estoque alterada e recalculada.'),
-              onError: (e) => toast.error(e.message),
-            },
-          )
-        }}
-      />
-    </div>
-  )
-}
-
-/**
- * O motor de reposição soma só os depósitos marcados aqui (é o `E` do
- * cálculo). Devolução em avaliação, avaria, consignação e estoque de
- * marketplace (FBA) normalmente ficam de fora — mas a decisão é do usuário,
- * por isso o toggle. A mudança vale a partir do próximo cálculo.
- */
-function WarehousesCard() {
-  const { companyId } = useCompany()
-  const queryClient = useQueryClient()
-
-  const { data: warehouses } = useQuery({
-    queryKey: ['warehouses', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('warehouses')
-        .select('id, name, include_in_available')
-        .eq('company_id', companyId!)
-        .order('name')
-      if (error) throw error
-      return data as WarehouseRow[]
-    },
-  })
-
-  // Totais por depósito, só para dar contexto à decisão dos toggles.
-  const { data: pieces } = useQuery({
-    queryKey: ['warehouse-pieces', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const rows = await fetchAllRows(() =>
-        supabase
-          .from('product_stock')
-          .select('warehouse_id, qty, qty_reserved')
-          .eq('company_id', companyId!)
-          .or('qty.neq.0,qty_reserved.neq.0'),
-      )
-      const map = new Map<string, { saldo: number; reservado: number }>()
-      for (const r of rows as { warehouse_id: string; qty: number; qty_reserved: number }[]) {
-        const acc = map.get(r.warehouse_id) ?? { saldo: 0, reservado: 0 }
-        acc.saldo += Number(r.qty)
-        acc.reservado += Number(r.qty_reserved)
-        map.set(r.warehouse_id, acc)
-      }
-      return map
-    },
-  })
-
-  const toggle = useMutation({
-    mutationFn: async ({ id, value }: { id: string; value: boolean }) => {
-      const { error } = await supabase
-        .from('warehouses')
-        .update({ include_in_available: value })
-        .eq('id', id)
-      if (error) throw error
-    },
-    // Otimista: o switch responde na hora; rollback se o banco recusar.
-    onMutate: async ({ id, value }) => {
-      await queryClient.cancelQueries({ queryKey: ['warehouses', companyId] })
-      const previous = queryClient.getQueryData<WarehouseRow[]>(['warehouses', companyId])
-      queryClient.setQueryData<WarehouseRow[]>(['warehouses', companyId], (old) =>
-        old?.map((w) => (w.id === id ? { ...w, include_in_available: value } : w)))
-      return { previous }
-    },
-    onError: (e, _vars, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(['warehouses', companyId], ctx.previous)
-      toast.error(e instanceof Error ? e.message : 'Não foi possível salvar.')
-    },
-    onSuccess: () => {
-      toast.success('Salvo. Vale a partir do próximo cálculo.')
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ['warehouses', companyId] })
-    },
-  })
-
-  if (!warehouses || warehouses.length === 0) return null
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Warehouse className="h-4 w-4 text-muted-foreground" /> Depósitos
-        </CardTitle>
-        <CardDescription>
-          Marque quais depósitos contam como estoque disponível no cálculo de reposição.
-          Mudanças valem a partir do próximo cálculo.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Depósito</TableHead>
-              <TableHead className="text-right">Peças</TableHead>
-              <TableHead className="text-right">Reservadas</TableHead>
-              <TableHead className="text-right">Disponível p/ venda</TableHead>
-              <TableHead className="text-right">Conta como disponível</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {warehouses.map((w) => {
-              const t = pieces?.get(w.id)
-              return (
-                <TableRow key={w.id}>
-                  <TableCell className="font-medium">{w.name}</TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {t ? formatInt(t.saldo) : pieces ? '0' : '…'}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {t ? formatInt(t.reservado) : pieces ? '0' : '…'}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {t ? formatInt(t.saldo - t.reservado) : pieces ? '0' : '…'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Switch
-                      checked={w.include_in_available}
-                      disabled={toggle.isPending}
-                      aria-label={`Contar ${w.name} como disponível`}
-                      onCheckedChange={(value) => toggle.mutate({ id: w.id, value })}
-                    />
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-
-        <StockBasisToggle />
+        {editing && (
+          <div className="space-y-4 rounded-lg border border-border p-3">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Webhook className="h-4 w-4 text-muted-foreground" /> Conector e dados técnicos
+            </p>
+            <CopyField
+              label="ingestUrl"
+              value={TRIER_INGEST_URL}
+              hint="Vai no borarepo.config.json do conector. O conector lê o SGF em http://localhost:4647 dentro da loja e envia para cá por HTTPS — nenhuma porta é aberta na farmácia e o token da Trier não sai de lá."
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -1004,8 +841,6 @@ export default function Integrations() {
           )}
         </>
       )}
-
-      <WarehousesCard />
 
       <AddIntegrationDialog
         open={dialogOpen}

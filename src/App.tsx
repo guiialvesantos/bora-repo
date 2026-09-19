@@ -23,6 +23,7 @@ import Import from '@/pages/Import'
 import Settings from '@/pages/Settings'
 import Documentation from '@/pages/Documentation'
 import Integrations from '@/pages/Integrations'
+import Warehouses from '@/pages/Warehouses'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -120,7 +121,7 @@ export default function App() {
                     <Route path="produto/:productId" element={<ProductAnalysis />} />
                   </Route>
                   <Route path="/relatorios" element={<Reports />} />
-                  {/* Rota SEM path: só veste estas cinco telas com o cabeçalho
+                  {/* Rota SEM path: só veste estas telas com o cabeçalho
                       e a faixa de abas de Configurações. Os endereços seguem
                       idênticos — `/integracoes` continua sendo `/integracoes`
                       porque é para lá que a Edge Function do OAuth do Tiny
@@ -128,6 +129,7 @@ export default function App() {
                   <Route element={<SettingsHub />}>
                     <Route path="/configuracoes" element={<Settings />} />
                     <Route path="/integracoes" element={<Integrations />} />
+                    <Route path="/depositos" element={<Warehouses />} />
                     <Route path="/importar" element={<Import />} />
                     <Route path="/equipe" element={<Team />} />
                     <Route path="/saude-dos-dados" element={<DataHealth />} />

@@ -10,6 +10,7 @@
 //   { action: 'issue',      companyId, label }  → { key }  (mostrada UMA vez)
 //   { action: 'revoke',     companyId, connectorId }
 //   { action: 'disconnect', companyId }
+//   { action: 'remove',     companyId }             ← apaga a conexão
 //
 // ----------------------------------------------------------------------------
 // Diferença essencial para o `tiny-connect`: aqui NÃO existe token de terceiro
@@ -180,6 +181,21 @@ Deno.serve(async (req) => {
         .from('integration_connections')
         .update({ status: 'disconnected', last_error: null })
         .eq('id', conn.id)
+      return json({ ok: true })
+    }
+
+    // Apagar a integração inteira. Os conectores caem em cascata (0038), então
+    // nenhuma chave sobra viva. O depósito de cada loja FICA — `warehouse_id` é
+    // `on delete restrict` de propósito: o estoque daquela farmácia continua
+    // contado no motor, e quem quiser tirá-lo desliga o depósito na aba
+    // Depósitos, que é onde essa decisão mora.
+    if (action === 'remove') {
+      const { error } = await admin
+        .from('integration_connections')
+        .delete()
+        .eq('company_id', companyId)
+        .eq('provider', 'trier_sgf')
+      if (error) throw error
       return json({ ok: true })
     }
 

@@ -25,6 +25,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 const TABS = [
   { to: '/configuracoes', label: 'Parâmetros' },
   { to: '/integracoes', label: 'Integrações' },
+  { to: '/depositos', label: 'Depósitos' },
   { to: '/importar', label: 'Importar' },
   { to: '/equipe', label: 'Equipe' },
   { to: '/saude-dos-dados', label: 'Saúde dos dados' },
@@ -42,7 +43,7 @@ export default function SettingsHub() {
         </p>
       </div>
 
-      {/* Mesma faixa de abas da tela de Análise. São cinco e cabem numa linha;
+      {/* Mesma faixa de abas da tela de Análise. São seis e cabem numa linha;
           se um dia não couberem, o `flex-wrap` quebra em duas em vez de cortar
           a última no fio da borda. */}
       <div className="inline-flex flex-wrap gap-1 rounded-md bg-mono-200 p-1">
