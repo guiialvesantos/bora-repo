@@ -71,6 +71,18 @@ export interface ProductAnalysisData {
    *  começam os DADOS, não onde começou o produto. 14,5% do catálogo da All Out. */
   launch_censored: boolean
   base_start: string | null
+  /**
+   * Quando entrou mercadoria e quanto (0039). Não vem de nota fiscal — não
+   * existe nota de entrada na base —, e sim do degrau no saldo diário mais a
+   * venda do intervalo. `span` é quantos dias o degrau cobre: 1 no normal, 2+
+   * quando o snapshot da noite falhou e a data vira um intervalo.
+   */
+  entries: { d: string; q: string; span: number }[]
+  /** Primeiro dia com foto de saldo. Antes disso não há como saber — e silêncio
+   *  aqui não significa "não entrou nada". */
+  entries_since: string | null
+  last_entry: string | null
+  entries_total: string
 }
 
 export function useProductAnalysis(productId: string | undefined, days: number) {

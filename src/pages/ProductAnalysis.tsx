@@ -917,6 +917,78 @@ export default function ProductAnalysis() {
               </CardContent>
             </Card>
           )}
+
+          {/* Entradas de mercadoria */}
+          {data.entries_since && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitleRow
+                  noteLabel="Como as entradas são calculadas"
+                  note={
+                    <>
+                      <p>
+                        O ERP não manda data de recebimento nem número de nota. O que existe
+                        é a <strong>foto do saldo de cada dia</strong>, guardada desde{' '}
+                        {fmtDate(data.entries_since)}. Uma entrada é o degrau entre duas
+                        fotos, somado ao que foi vendido no meio: se o saldo subiu 40 num dia
+                        em que saíram 12 peças, entraram 52.
+                      </p>
+                      <p>
+                        A foto é tirada de madrugada, então cada linha é o{' '}
+                        <strong>fechamento do dia anterior</strong> — é essa a data mostrada.
+                      </p>
+                      <p>
+                        Entradas grandes são sinal confiável. Diferenças de uma ou duas peças
+                        podem ser só descompasso de data: o pedido conta na data da venda, e o
+                        ERP pode dar baixa no estoque na emissão ou no envio, um ou dois dias
+                        depois. Saídas sem venda (avaria, ajuste de inventário) não aparecem
+                        aqui — a lista mostra só o que entrou.
+                      </p>
+                    </>
+                  }
+                >
+                  <CardTitle className="text-card-title">Entradas de mercadoria</CardTitle>
+                  <CardDescription>
+                    {data.entries.length === 0
+                      ? `Nenhuma entrada desde ${fmtDate(data.entries_since)}`
+                      : `${formatInt(num(data.entries_total))} un em ${data.entries.length} `
+                        + `${data.entries.length === 1 ? 'entrada' : 'entradas'} desde `
+                        + fmtDate(data.entries_since)}
+                  </CardDescription>
+                </CardTitleRow>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {data.entries.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    O saldo{data.is_grade ? ' da grade' : ''} não subiu nenhuma vez desde que o
+                    acompanhamento começou. Reposição anterior a {fmtDate(data.entries_since)}{' '}
+                    não é visível.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {data.entries.map((e) => (
+                      <li
+                        key={e.d}
+                        className="flex items-center justify-between gap-3 py-2 text-xs"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="font-data tabular-nums">{fmtDate(e.d)}</span>
+                          {e.span > 1 && (
+                            <span className="rounded-xs bg-surface-inset px-1.5 py-0.5 text-micro text-muted-foreground">
+                              ou até {e.span - 1} dia{e.span > 2 ? 's' : ''} antes
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0 font-data font-medium tabular-nums">
+                          +{formatInt(num(e.q))} un
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
