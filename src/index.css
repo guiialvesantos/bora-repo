@@ -59,6 +59,17 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+
+    /* A regra acima corta a animação em UMA volta, e a volta da marca termina
+       em `opacity: 0` — é assim que ela se prepara para recomeçar. Sem esta
+       exceção, quem pede menos movimento veria a tela de carregamento vazia:
+       a marca apareceria e sumiria em 0,01ms. Aqui ela simplesmente não anima
+       e fica parada e inteira. */
+    .animate-slab {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 }
 
@@ -227,9 +238,30 @@
    o ancestral com display tiraria o documento do fluxo junto; `visibility`
    apaga a casca e deixa o miolo imprimir no lugar dele.
    --------------------------------------------------------------------------- */
+/* O cabeçalho de procedência e os valores de leitura só existem no papel: na
+   tela o contexto já está em volta, e repetir viraria ruído. */
+.print-only {
+  display: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Campo editável não é documento. No papel vale o número que o comprador
+     escolheu, não a caixinha onde ele digitou — um <input> impresso sai como
+     uma moldura vazia em volta do valor. */
+  #report-doc .screen-only {
+    display: none !important;
+  }
+
+  #report-doc .print-value {
+    display: inline !important;
   }
 
   #report-doc,
@@ -283,4 +315,8 @@
   .no-print {
     display: none !important;
   }
+}
+
+.print-value {
+  display: none;
 }

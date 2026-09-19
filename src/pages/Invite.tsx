@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCompany } from '@/contexts/CompanyContext'
+import { LogoLoader } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -93,13 +94,23 @@ export default function Invite() {
     if (error) toast.error(error.message)
   }
 
-  if (loading) return null
+  // Era `return null`: tela branca até a sessão responder. Numa página aberta
+  // por link de convite esse é o pior lugar possível para não mostrar nada —
+  // quem chega aqui não conhece o sistema e não tem como distinguir demora de
+  // carregamento de link quebrado.
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <LogoLoader className="w-[76px] text-brand-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="font-display text-xl">Convite · ReporIA</CardTitle>
+          <CardTitle className="font-display text-xl">Convite · BoraRepô</CardTitle>
           <CardDescription>
             {session
               ? `Você está entrando como ${session.user.email}.`

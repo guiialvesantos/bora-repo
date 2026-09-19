@@ -4,6 +4,7 @@ import { useReplenishmentParams } from '@/hooks/useReplenishmentParams'
 import { useProductImages } from '@/hooks/useProductImages'
 import { ProductCell } from '@/components/ProductThumb'
 import { ColLabel } from '@/components/InfoHint'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { formatBRL, formatInt } from '@/lib/money'
 import { num } from '@/lib/replenishment-types'
 import type { AbcClass, SnapshotItem } from '@/lib/replenishment-types'
@@ -30,9 +31,25 @@ function pct(v: number) {
   return `${v.toFixed(1).replace('.', ',')}%`
 }
 
+/**
+ * Um `[]` escrito na linha do `??` nasce diferente a cada render, e os dois
+ * `useMemo` abaixo — que ordenam e agrupam ~2 mil linhas — recomeçariam do zero
+ * a cada toque de estado. Uma constante de módulo tem sempre a mesma
+ * identidade, então "sem itens" é o mesmo "sem itens" da volta anterior.
+ */
+const NO_ITEMS: SnapshotItem[] = []
+
 export default function AbcCurve() {
-  const { data: snapshot } = useCurrentSnapshot()
-  const { data: items = [], isLoading } = useSnapshotItems(snapshot?.id)
+  const snap = useCurrentSnapshot()
+  const snapshot = snap.data
+  const itemsQuery = useSnapshotItems(snapshot?.id)
+  const items = itemsQuery.data ?? NO_ITEMS
+
+  // A espera é a das DUAS consultas, em série: a das linhas nasce desligada
+  // (`enabled: !!snapshotId`) e só liga quando o snapshot chega. Perguntar só
+  // por ela deixaria um vão — consulta desligada não está carregando — em que a
+  // tela anunciaria "nenhum item com classe" antes de ter pedido os itens.
+  const isLoading = snap.isLoading || itemsQuery.isLoading
   const { data: params } = useReplenishmentParams()
   const { data: images } = useProductImages()
 
@@ -69,6 +86,25 @@ export default function AbcCurve() {
     }
     return acc
   }, [ranked])
+
+  // A ordem aqui é a correção. Antes a tela testava só `!snapshot`, e
+  // `undefined` durante a consulta cai no mesmo balde que `null` depois dela:
+  // quem abria a curva via "nenhum cálculo ainda" por um instante, mesmo tendo
+  // cálculo. Agora a espera aparece como espera, e o vazio só é anunciado
+  // depois que o banco respondeu que realmente não há nada.
+  // A espera cobre a tela inteira, e não só a tabela. Os três cartões de cima
+  // são somados a partir das MESMAS linhas: enquanto elas não chegam, eles
+  // mostram "0 itens · R$ 0,00 por ano" — que não se lê como espera, se lê como
+  // resposta. Um zero com cara de número certo é pior que um vazio.
+  if (isLoading) return <LoadingBlock className="min-h-[50vh]" />
+
+  if (snap.error) {
+    return (
+      <p className="text-sm text-destructive">
+        Não foi possível carregar o cálculo: {snap.error.message}
+      </p>
+    )
+  }
 
   if (!snapshot) {
     return <p className="text-sm text-muted-foreground">Nenhum cálculo ainda. Importe os dados e recalcule.</p>
@@ -121,9 +157,7 @@ export default function AbcCurve() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
-          ) : ranked.length === 0 ? (
+          {ranked.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               Nenhum item em coleção com classe atribuída.
             </p>

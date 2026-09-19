@@ -1,8 +1,5 @@
 import { num, maybeNum } from './replenishment-types'
-import { ACTION_BY_KEY } from './stalled'
-import type { StalledItem } from './stalled'
 import type { ReportCatalogRow, ReportCatalogData } from '@/hooks/useReportCatalog'
-import type { SnapshotItem } from './replenishment-types'
 
 /**
  * Relatório é consulta congelada, não tela.
@@ -20,15 +17,25 @@ import type { SnapshotItem } from './replenishment-types'
  * encosta no banco.
  */
 
-export type ReportKey = 'sell-through' | 'pedido' | 'posicao' | 'encalhados'
+/**
+ * Aqui só entra relatório que não tem tela própria.
+ *
+ * O Pedido de compra e os Encalhados já eram telas inteiras, e viveram um tempo
+ * duplicados neste catálogo: a mesma consulta, com dois caminhos para chegar e
+ * dois lugares para dar manutenção. Pior, o pedido impresso daqui saía com a
+ * sugestão crua do motor, ignorando o ajuste que o comprador tinha acabado de
+ * fazer na outra tela — dois papéis com números diferentes para a mesma compra.
+ * O que valia a pena não era o relatório, era o BOTÃO: agora o "Baixar PDF"
+ * mora na própria tela, imprimindo exatamente o que está na frente de quem
+ * clicou.
+ */
+export type ReportKey = 'sell-through' | 'posicao'
 
 export interface ReportDef {
   key: ReportKey
   title: string
   /** A pergunta que ele responde, em uma linha. */
   question: string
-  /** De onde vêm as linhas — decide qual hook a página precisa acordar. */
-  source: 'catalog' | 'snapshot' | 'stalled'
 }
 
 export const REPORTS: ReportDef[] = [
@@ -36,25 +43,11 @@ export const REPORTS: ReportDef[] = [
     key: 'sell-through',
     title: 'Sell-through',
     question: 'O que gira: quanto de tudo que entrou já saiu, por SKU.',
-    source: 'catalog',
-  },
-  {
-    key: 'pedido',
-    title: 'Pedido de compra',
-    question: 'O que comprar nesta rodada, com custo e total — para mandar ao fornecedor.',
-    source: 'snapshot',
   },
   {
     key: 'posicao',
     title: 'Posição de estoque',
     question: 'Quanto existe e quanto vale, a custo e a preço de venda.',
-    source: 'catalog',
-  },
-  {
-    key: 'encalhados',
-    title: 'Encalhados',
-    question: 'O que parou de sair, há quanto tempo e o que fazer com cada um.',
-    source: 'stalled',
   },
 ]
 
@@ -91,8 +84,6 @@ export interface ReportParams {
   minPct: number
   /** Piso de volume: sem ele, vender 2 peças e zerar vira "100%". */
   minUnits: number
-  /** Dias sem vender, para Encalhados. */
-  minDays: number
   /** `all` ou o nome da categoria. */
   category: string
   /** Posição de estoque: incluir o que está inativo no ERP. */
@@ -102,7 +93,6 @@ export interface ReportParams {
 export const DEFAULT_PARAMS: ReportParams = {
   minPct: 80,
   minUnits: 5,
-  minDays: 90,
   category: 'all',
   includeInactive: false,
 }
@@ -280,105 +270,6 @@ export function buildPosicao(
       stock: pieces, cmv: null, cost, price: null, value: price,
     },
     empty: 'Nenhum item com saldo neste recorte.',
-  }
-}
-
-/** O pedido: as linhas que o motor mandou comprar, com custo e total. */
-export function buildPedido(items: SnapshotItem[]): ReportTable {
-  const kept = items
-    .filter((i) => i.should_order)
-    .sort((a, b) =>
-      num(b.qty_to_order) * num(b.cmv_used) - num(a.qty_to_order) * num(a.cmv_used))
-
-  const pieces = kept.reduce((s, i) => s + num(i.qty_to_order), 0)
-  const cost = kept.reduce((s, i) => s + num(i.qty_to_order) * num(i.cmv_used), 0)
-
-  return {
-    caption: 'Itens em coleção cujo estoque mais o que está a caminho já caiu ao ponto de pedido',
-    summary: [
-      { label: 'Linhas', value: kept.length.toLocaleString('pt-BR') },
-      { label: 'Peças', value: formatCell(pieces, 'int') },
-      { label: 'Custo total', value: formatMoney(cost) },
-    ],
-    columns: [
-      { key: 'sku', label: 'SKU', format: 'mono' },
-      { key: 'name', label: 'Produto', format: 'text' },
-      { key: 'stock', label: 'Estoque', format: 'int' },
-      { key: 'transit', label: 'Trânsito', format: 'int' },
-      { key: 'pp', label: 'PP', format: 'int' },
-      { key: 'emax', label: 'Emáx', format: 'int' },
-      { key: 'qty', label: 'Qtd a pedir', format: 'int' },
-      { key: 'cmv', label: 'Custo un.', format: 'brl' },
-      { key: 'line', label: 'Custo da linha', format: 'brl' },
-    ],
-    rows: kept.map((i) => ({
-      sku: i.sku ?? '—',
-      name: i.name ?? '—',
-      stock: num(i.stock_total),
-      transit: num(i.in_transit),
-      pp: num(i.reorder_point),
-      emax: num(i.max_stock),
-      qty: num(i.qty_to_order),
-      cmv: num(i.cmv_used),
-      line: num(i.qty_to_order) * num(i.cmv_used),
-    })),
-    total: {
-      sku: 'Total', name: '', stock: null, transit: null, pp: null, emax: null,
-      qty: pieces, cmv: null, line: cost,
-    },
-    empty: 'Nada a pedir nesta rodada.',
-  }
-}
-
-/** Encalhados: reusa a política já escrita em `stalled.ts`, sem recalcular. */
-export function buildEncalhados(
-  items: StalledItem[],
-  p: ReportParams,
-  stockCost: number,
-): ReportTable {
-  const kept = p.category === ALL
-    ? items
-    : items.filter((x) => (x.row.category ?? 'Sem categoria') === p.category)
-
-  const cost = kept.reduce((s, x) => s + x.cost, 0)
-  const pieces = kept.reduce((s, x) => s + x.stock, 0)
-
-  return {
-    caption: `Sem vender há mais de ${p.minDays} dias`
-      + (p.category === ALL ? '' : ` · categoria ${p.category}`),
-    summary: [
-      { label: 'SKUs', value: kept.length.toLocaleString('pt-BR') },
-      { label: 'Peças', value: formatCell(pieces, 'int') },
-      { label: 'Capital parado', value: formatMoney(cost) },
-      {
-        label: 'Do estoque a custo',
-        value: stockCost > 0 ? pct(cost / stockCost) : '—',
-      },
-    ],
-    columns: [
-      { key: 'sku', label: 'SKU', format: 'mono' },
-      { key: 'name', label: 'Produto', format: 'text' },
-      { key: 'last', label: 'Última venda', format: 'date' },
-      { key: 'days', label: 'Dias parado', format: 'int' },
-      { key: 'stock', label: 'Peças', format: 'int' },
-      { key: 'cost', label: 'Capital', format: 'brl' },
-      { key: 'action', label: 'Recomendação', format: 'text' },
-    ],
-    rows: kept.map((x) => ({
-      sku: x.row.sku ?? '—',
-      name: x.row.name ?? '—',
-      last: x.row.last_sale,
-      // Nulo, não zero: zero diria "vendeu hoje".
-      days: x.days,
-      stock: x.stock,
-      cost: x.cost,
-      action: ACTION_BY_KEY[x.action].label,
-    })),
-    total: {
-      sku: 'Total', name: '', last: null, days: null,
-      stock: pieces, cost, action: '',
-    },
-    empty: 'Nenhum item parado nesse recorte.',
   }
 }
 

@@ -24,6 +24,21 @@ function dmy(iso: string): string {
 }
 
 /**
+ * O endereço que o convite carrega.
+ *
+ * `stock.linqer.com.br` continua no ar — favoritos e convites antigos apontam
+ * para lá — mas quem gera um convite de lá não deve espalhar o endereço velho:
+ * o link vai para o WhatsApp de alguém e vira o endereço que essa pessoa vai
+ * guardar. Então em produção o convite nasce sempre em `borarepo`, e fora dela
+ * (localhost, preview) vale o endereço de onde você está, senão o link não abre.
+ */
+function inviteOrigin(): string {
+  return window.location.hostname.endsWith('linqer.com.br')
+    ? 'https://borarepo.linqer.com.br'
+    : window.location.origin
+}
+
+/**
  * O link do convite, mostrado uma vez só.
  *
  * Fica num bloco destacado e não numa notificação que some sozinha, porque
@@ -79,7 +94,7 @@ export default function Team() {
   async function invite(target: string, targetRole: AppRole) {
     try {
       const token = await create.mutateAsync({ email: target, role: targetRole })
-      setLink({ url: `${window.location.origin}/convite/${token}`, email: target.toLowerCase() })
+      setLink({ url: `${inviteOrigin()}/convite/${token}`, email: target.toLowerCase() })
       setEmail('')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Não foi possível criar o convite')

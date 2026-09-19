@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Download, CircleSlash, FilePlus2, History, Loader2, RefreshCw, RotateCcw } from 'lucide-react'
+import { Download, CircleSlash, FilePlus2, History, Loader2, Printer, RefreshCw, RotateCcw } from 'lucide-react'
 import { useCurrentSnapshot, useComputeSnapshot, useSnapshotItems } from '@/hooks/useCurrentSnapshot'
 import { useCompany } from '@/contexts/CompanyContext'
 import { useDataHealth } from '@/hooks/useDataHealth'
@@ -11,8 +11,12 @@ import {
 import type { PurchaseOrderRow, PurchaseStatus } from '@/hooks/usePurchaseOrders'
 import { ProductCell } from '@/components/ProductThumb'
 import { ColLabel } from '@/components/InfoHint'
+import { PrintHeader } from '@/components/PrintHeader'
+import { printDocument } from '@/lib/print'
 import { formatBRL, formatInt } from '@/lib/money'
 import { num, maybeNum } from '@/lib/replenishment-types'
+import type { SnapshotItem } from '@/lib/replenishment-types'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -41,6 +45,10 @@ function toCsv(rows: (string | number)[][]) {
     }).join(';'))
     .join('\r\n')
 }
+
+/** Identidade estável para "sem linhas": um `[]` na linha do `??` nasce novo a
+ *  cada render e faria os `useMemo` desta tela refazerem a conta à toa. */
+const NO_ITEMS: SnapshotItem[] = []
 
 const STATUS: Record<PurchaseStatus, { label: string; className: string }> = {
   draft: { label: 'Rascunho', className: 'border-warning-300 text-warning-800' },
@@ -79,7 +87,7 @@ function OrderHistory() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando…</p>
+          <LoadingBlock size="sm" />
         ) : orders.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             Nenhum pedido gerado ainda.
@@ -177,9 +185,11 @@ function OrderHistory() {
 }
 
 export default function PurchaseOrder() {
-  const { canWrite } = useCompany()
-  const { data: snapshot } = useCurrentSnapshot()
-  const { data: items = [] } = useSnapshotItems(snapshot?.id)
+  const { canWrite, company } = useCompany()
+  const snap = useCurrentSnapshot()
+  const snapshot = snap.data
+  const itemsQuery = useSnapshotItems(snapshot?.id)
+  const items = itemsQuery.data ?? NO_ITEMS
   const { data: health } = useDataHealth()
   const { data: images } = useProductImages()
   const create = useCreatePurchaseOrder()
@@ -264,6 +274,13 @@ export default function PurchaseOrder() {
     })
   }
 
+  // A espera vem antes, e aqui isso vale mais do que estética. `!snapshot` é
+  // verdadeiro enquanto a consulta não responde, então esta tela piscava
+  // "Nenhum cálculo ainda" — com um botão "Calcular agora" ao lado — para quem
+  // tem cálculo. Quem clicasse nesse instante dispararia um recálculo que não
+  // precisava, na tela em que se gasta dinheiro.
+  if (snap.isLoading || itemsQuery.isLoading) return <LoadingBlock className="min-h-[50vh]" />
+
   if (!snapshot) {
     return (
       <Card>
@@ -290,7 +307,7 @@ export default function PurchaseOrder() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="no-print flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-page-title">Pedido de compra</h1>
           <p className="text-sm text-muted-foreground">
@@ -320,6 +337,17 @@ export default function PurchaseOrder() {
           >
             <Download className="mr-2 h-4 w-4" /> Exportar CSV
           </Button>
+          {/* Imprime o pedido COMO ESTÁ na tela, ajuste do comprador incluído.
+              Não depende de gerar: o papel que vai ao fornecedor costuma sair
+              antes da decisão de registrar. */}
+          <Button
+            variant="outline"
+            onClick={() => printDocument(
+              `borarepo-pedido-${snapshot.reference_date ?? 'stock'}`)}
+            disabled={ordered.length === 0}
+          >
+            <Printer className="mr-2 h-4 w-4" /> Baixar PDF
+          </Button>
           <Button
             onClick={generate}
             disabled={blocked.length > 0 || ordered.length === 0 || create.isPending}
@@ -334,7 +362,7 @@ export default function PurchaseOrder() {
 
       {/* A única tela que bloqueia. Bloquear em todas ensinaria a ignorar. */}
       {blocked.length > 0 && (
-        <Card className="border-error-300 bg-error-100">
+        <Card className="no-print border-error-300 bg-error-100">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-destructive">
               <CircleSlash className="h-4 w-4" /> Não dá para gerar o pedido
@@ -351,13 +379,21 @@ export default function PurchaseOrder() {
         </Card>
       )}
 
-      <Card>
+      {/* O documento: tudo fora daqui some na impressão. */}
+      <Card id="report-doc">
         <CardHeader>
+          <PrintHeader
+            title="Pedido de compra"
+            company={company?.name}
+            caption="Itens em coleção cujo estoque mais o que está a caminho já caiu ao ponto de pedido."
+            referenceDate={snapshot.reference_date}
+            provenance={`params v${snapshot.params_version} · ${model}`}
+          />
           <CardTitle className="text-base">
             {formatInt(ordered.length)} linhas · {formatInt(totalPieces)} peças ·{' '}
             {formatBRL(totalCost)}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="no-print">
             Ordenado pelo custo da linha — a decisão mais cara primeiro. A quantidade é editável:
             o comprador sabe de caixa fechada e pedido mínimo, que o motor não tem como saber.
             Zerar uma linha a tira do pedido.
@@ -404,8 +440,14 @@ export default function PurchaseOrder() {
                 {lines.map((i) => {
                   const qty = qtyOf(i.product_id, i.qty_to_order)
                   const changed = qty !== num(i.qty_to_order)
+                  // Linha zerada some do papel: o comprador a tirou do pedido,
+                  // e imprimi-la mandaria o fornecedor despachar justamente o
+                  // que foi recusado.
                   return (
-                    <TableRow key={i.product_id} className={qty === 0 ? 'opacity-50' : undefined}>
+                    <TableRow
+                      key={i.product_id}
+                      className={qty === 0 ? 'no-print opacity-50' : undefined}
+                    >
                       <TableCell className="font-mono text-xs">{i.sku}</TableCell>
                       <TableCell className="max-w-[280px]">
                         <ProductCell image={images?.get(i.product_id)} name={i.name} />
@@ -423,11 +465,12 @@ export default function PurchaseOrder() {
                       <TableCell className="text-right">
                         <Input
                           inputMode="numeric"
-                          className="ml-auto h-8 w-20 text-right tabular-nums"
+                          className="screen-only ml-auto h-8 w-20 text-right tabular-nums"
                           value={edits[i.product_id] ?? String(num(i.qty_to_order))}
                           onChange={(e) =>
                             setEdits({ ...edits, [i.product_id]: e.target.value })}
                         />
+                        <span className="print-value tabular-nums">{formatInt(qty)}</span>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatBRL(num(i.cmv_used))}
@@ -452,7 +495,9 @@ export default function PurchaseOrder() {
         </CardContent>
       </Card>
 
-      <OrderHistory />
+      <div className="no-print">
+        <OrderHistory />
+      </div>
     </div>
   )
 }

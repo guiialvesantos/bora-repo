@@ -25,6 +25,7 @@ import { SalesByCategoryCard } from '@/components/dashboard/SalesByCategoryCard'
 import { SoldTogetherCard, UpsellCard } from '@/components/dashboard/BasketCards'
 import { StockProjectionChart } from '@/components/charts/StockProjectionChart'
 import type { ProjectionItem } from '@/components/charts/StockProjectionChart'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { SearchableSelect } from '@/components/ui/searchable-select'
@@ -407,7 +408,10 @@ export default function Dashboard() {
     }
   }, [items])
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>
+  // A página inteira ainda não existe, então o bloco ganha a altura de uma
+  // dobra: com a altura mínima padrão o rodapé subia para o meio da tela e
+  // descia de volta quando o snapshot chegava.
+  if (isLoading) return <LoadingBlock className="min-h-[60vh]" />
 
   if (!snapshot) {
     return (

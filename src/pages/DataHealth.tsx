@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, CircleSlash, Clock } from 'lucide-react'
 import { useDataHealth } from '@/hooks/useDataHealth'
 import { KIND_LABEL } from '@/lib/replenishment-types'
 import { formatInt } from '@/lib/money'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -21,7 +22,7 @@ function d(v: string | null) {
 export default function DataHealth() {
   const { data, isLoading } = useDataHealth()
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>
+  if (isLoading) return <LoadingBlock className="min-h-[50vh]" />
   if (!data) return <p className="text-sm text-muted-foreground">Sem dados.</p>
 
   const { checks, params } = data

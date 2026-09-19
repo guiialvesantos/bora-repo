@@ -13,6 +13,7 @@ import type {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
@@ -126,7 +127,7 @@ function StatRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function Settings() {
-  const { data: params, isLoading } = useReplenishmentParams()
+  const { data: params, isLoading, error } = useReplenishmentParams()
   const { data: history = [] } = useParamsHistory()
   const { data: snapshot } = useCurrentSnapshot()
   const preview = usePreview()
@@ -154,9 +155,20 @@ export default function Settings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, dirty])
 
-  if (isLoading || !draft || !params) {
-    return <p className="text-sm text-muted-foreground">Carregando…</p>
+  // A falha vem ANTES da espera, e de propósito. A condição de baixo é
+  // `!draft || !params`, que continua verdadeira depois de a consulta ter
+  // fracassado — com o texto "Carregando…" isso já era impreciso, mas com a
+  // marca se remontando em laço vira promessa: o desenho diz "está vindo" para
+  // sempre, numa tela que não vai carregar sem alguém recarregar a página.
+  if (error) {
+    return (
+      <p className="text-sm text-destructive">
+        Não foi possível carregar os parâmetros: {error.message}
+      </p>
+    )
   }
+
+  if (isLoading || !draft || !params) return <LoadingBlock className="min-h-[50vh]" />
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v })
 

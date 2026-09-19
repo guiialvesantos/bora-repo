@@ -319,10 +319,20 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        // Uma lâmina da marca entrando. O ciclo tem folga no fim (de 70% a
+        // 100% a peça já está no lugar) porque as três compartilham a mesma
+        // volta e a última só começa 300ms depois da primeira: sem a folga,
+        // a primeira já estaria saindo quando a terceira entrasse, e o
+        // desenho nunca apareceria inteiro.
+        slab: {
+          '0%, 100%': { opacity: '0', transform: 'translate(-110px, 90px)' },
+          '18%, 70%': { opacity: '1', transform: 'translate(0, 0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.16s ease-out',
         'accordion-up': 'accordion-up 0.16s ease-out',
+        slab: 'slab 1.6s var(--ease-standard) infinite',
       },
     },
   },

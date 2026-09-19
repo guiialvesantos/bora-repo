@@ -25,6 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProductCell } from '@/components/ProductThumb'
 import { ColLabel } from '@/components/InfoHint'
+import { LoadingBlock } from '@/components/brand/Logo'
 
 /**
  * A tela que tira a planilha de descontinuados do circuito: marcar/desmarcar
@@ -188,7 +189,7 @@ export default function Products() {
   // A demanda vem do MESMO snapshot que o pedido de compra lê. Recalcular aqui
   // faria esta tela discordar daquela — que é o defeito que o snapshot existe
   // para evitar.
-  const { data: snapshot } = useCurrentSnapshot()
+  const { data: snapshot, isLoading: snapLoading } = useCurrentSnapshot()
   const { data: snapItems } = useSnapshotItems(snapshot?.id)
   const qc = useQueryClient()
 
@@ -573,13 +574,17 @@ export default function Products() {
         </p>
       </div>
 
+      {/* Os contadores só aparecem depois da resposta. Enquanto o catálogo vinha,
+          as abas diziam "Catálogo (0)" e o cartão dizia "0 em coleção · 0 fora":
+          zeros com cara de contagem terminada, ao lado de uma marca girando que
+          avisa justamente o contrário. Reticências não afirmam nada. */}
       <Tabs defaultValue="catalog">
         <TabsList>
           <TabsTrigger value="catalog">
-            Catálogo ({formatInt(rows.length)})
+            Catálogo ({isLoading ? '…' : formatInt(rows.length)})
           </TabsTrigger>
           <TabsTrigger value="legacy">
-            Códigos legados ({formatInt(legacy.length)})
+            Códigos legados ({isLoading ? '…' : formatInt(legacy.length)})
           </TabsTrigger>
         </TabsList>
 
@@ -589,8 +594,14 @@ export default function Products() {
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <CardTitle className="text-base">
-                    {formatInt(rows.length - outCount)} em coleção · {formatInt(outCount)} fora
-                    {useGroups && ` · ${formatInt(groups?.length ?? 0)} produtos na lista`}
+                    {isLoading ? (
+                      'Carregando o catálogo'
+                    ) : (
+                      <>
+                        {formatInt(rows.length - outCount)} em coleção · {formatInt(outCount)} fora
+                        {useGroups && ` · ${formatInt(groups?.length ?? 0)} produtos na lista`}
+                      </>
+                    )}
                   </CardTitle>
                   <CardDescription>
                     {useGroups
@@ -664,8 +675,11 @@ export default function Products() {
 
               {/* Duas colunas do cálculo dependem de um snapshot. Sem ele elas
                   mostram "·", e o motivo fica escrito — em vez de zero, que
-                  seria uma afirmação sobre a demanda. */}
-              {!snapshot && (
+                  seria uma afirmação sobre a demanda.
+                  `!snapLoading` junto porque `undefined` durante a consulta cai
+                  no mesmo teste que `null` depois dela: sem isso o aviso piscava
+                  em quem TEM cálculo, dizendo que não tem. */}
+              {!snapLoading && !snapshot && (
                 <p className="text-xs text-muted-foreground">
                   Demanda e “a pedir” aparecem depois do primeiro cálculo no Painel.
                 </p>
@@ -681,7 +695,7 @@ export default function Products() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
+                <LoadingBlock />
               ) : filtered.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   Nenhum produto {search || filter !== 'all' ? 'com esse filtro' : 'importado ainda'}.

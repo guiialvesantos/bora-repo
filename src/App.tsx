@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { CompanyProvider, useCompany } from '@/contexts/CompanyContext'
 import { AppShell } from '@/components/layout/AppShell'
+import { LogoLoader } from '@/components/brand/Logo'
 import Auth from '@/pages/Auth'
 import Dashboard from '@/pages/Dashboard'
 import DataHealth from '@/pages/DataHealth'
@@ -37,6 +38,26 @@ function FullScreenMessage({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * A espera com cara de espera: só a marca se montando, sem legenda.
+ *
+ * Separada de `FullScreenMessage` porque nem toda tela cheia é carregamento — a
+ * de "sua conta não está vinculada a nenhuma empresa" é um FIM, não um meio, e
+ * uma marca pulsando embaixo dela prometeria que algo ainda vai acontecer.
+ *
+ * Sem texto: "Carregando…" e "Carregando empresa…" distinguiam duas etapas que
+ * ninguém consegue diferenciar nem agir sobre, e some antes de ser lido. O
+ * `aria-label` do próprio SVG cobre o leitor de tela, que é quem de fato
+ * precisa da palavra.
+ */
+function FullScreenLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-8">
+      <LogoLoader className="w-[76px] text-brand-600" />
+    </div>
+  )
+}
+
 function LegacyProductRedirect() {
   const { productId } = useParams()
   return <Navigate to={`/analise/produto/${productId}`} replace />
@@ -46,9 +67,9 @@ function ProtectedLayout() {
   const { session, loading: authLoading } = useAuth()
   const { loading: companyLoading, needsCompany } = useCompany()
 
-  if (authLoading) return <FullScreenMessage>Carregando…</FullScreenMessage>
+  if (authLoading) return <FullScreenLoading />
   if (!session) return <Navigate to="/entrar" replace />
-  if (companyLoading) return <FullScreenMessage>Carregando empresa…</FullScreenMessage>
+  if (companyLoading) return <FullScreenLoading />
   if (needsCompany) {
     return (
       <FullScreenMessage>

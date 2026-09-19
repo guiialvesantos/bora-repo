@@ -2,15 +2,13 @@ import { useMemo, useState } from 'react'
 import { Download, FileText, Printer } from 'lucide-react'
 import { useCompany } from '@/contexts/CompanyContext'
 import { useReportCatalog } from '@/hooks/useReportCatalog'
-import { useCurrentSnapshot, useSnapshotItems } from '@/hooks/useCurrentSnapshot'
-import { useStalled } from '@/hooks/useStalled'
-import { analyseStalled } from '@/lib/stalled'
 import {
   REPORTS, REPORT_BY_KEY, DEFAULT_PARAMS, categoriesOf, formatCell, isNumeric,
-  reportToCsv, buildSellThrough, buildPosicao, buildPedido, buildEncalhados,
+  reportToCsv, buildSellThrough, buildPosicao,
 } from '@/lib/reports'
 import type { ReportKey, ReportParams, ReportTable } from '@/lib/reports'
-import { num } from '@/lib/replenishment-types'
+import { printDocument } from '@/lib/print'
+import { LoadingBlock } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -22,8 +20,6 @@ import {
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-
-const DAY_WINDOWS = [30, 60, 90, 180, 365]
 
 /** Meio-dia porque `date` puro vira UTC e retrocede um dia em São Paulo. */
 function dmy(v: string | null | undefined) {
@@ -38,73 +34,27 @@ export default function Reports() {
 
   const def = REPORT_BY_KEY[key]
 
-  // Só acorda a fonte que o relatório escolhido usa. O catálogo inteiro são
-  // ~2 mil linhas: não vale buscá-lo para imprimir o pedido de compra.
-  const catalog = useReportCatalog(def.source === 'catalog')
-  const { data: snapshot } = useCurrentSnapshot()
-  const { data: items = [] } = useSnapshotItems(
-    def.source === 'snapshot' ? snapshot?.id : undefined)
-  const stalled = useStalled()
+  const catalog = useReportCatalog(true)
 
   const set = (patch: Partial<ReportParams>) => setParams({ ...params, ...patch })
 
-  const categories = useMemo(() => {
-    if (def.source === 'catalog') return categoriesOf(catalog.data?.rows ?? [])
-    if (def.source === 'stalled') return categoriesOf(stalled.data?.rows ?? [])
-    return []
-  }, [def.source, catalog.data, stalled.data])
-
-  const stalledReport = useMemo(() => {
-    if (!stalled.data) return null
-    return analyseStalled(stalled.data.rows, params.minDays, num(stalled.data.stock_cost))
-  }, [stalled.data, params.minDays])
+  const categories = useMemo(
+    () => categoriesOf(catalog.data?.rows ?? []),
+    [catalog.data])
 
   const table: ReportTable | null = useMemo(() => {
-    if (key === 'sell-through') {
-      return catalog.data ? buildSellThrough(catalog.data, params) : null
-    }
-    if (key === 'posicao') {
-      return catalog.data ? buildPosicao(catalog.data, params) : null
-    }
-    if (key === 'pedido') {
-      return items.length > 0 || snapshot ? buildPedido(items) : null
-    }
-    return stalledReport && stalled.data
-      ? buildEncalhados(stalledReport.items, params, num(stalled.data.stock_cost))
-      : null
-  }, [key, catalog.data, items, snapshot, stalledReport, stalled.data, params])
+    if (!catalog.data) return null
+    return key === 'sell-through'
+      ? buildSellThrough(catalog.data, params)
+      : buildPosicao(catalog.data, params)
+  }, [key, catalog.data, params])
 
-  const referenceDate = def.source === 'snapshot'
-    ? snapshot?.reference_date
-    : def.source === 'catalog'
-      ? catalog.data?.reference_date
-      : stalled.data?.reference_date
+  const referenceDate = catalog.data?.reference_date
 
-  const loading = def.source === 'catalog'
-    ? catalog.isLoading
-    : def.source === 'stalled'
-      ? stalled.isLoading
-      : !snapshot
+  const loading = catalog.isLoading
+  const error = catalog.error
 
-  const error = def.source === 'catalog' ? catalog.error : stalled.error
-
-  const slug = `reporia-${key}-${referenceDate ?? 'stock'}`
-
-  /**
-   * O nome do arquivo que o navegador sugere no "Salvar como PDF" vem do
-   * `document.title`. Trocar antes de imprimir e devolver no `afterprint` é o
-   * único jeito de controlá-lo sem biblioteca.
-   */
-  function printDoc() {
-    const previous = document.title
-    document.title = slug
-    const restore = () => {
-      document.title = previous
-      window.removeEventListener('afterprint', restore)
-    }
-    window.addEventListener('afterprint', restore)
-    window.print()
-  }
+  const slug = `borarepo-${key}-${referenceDate ?? 'stock'}`
 
   function exportCsv() {
     if (!table) return
@@ -133,7 +83,10 @@ export default function Reports() {
           >
             <Download className="mr-2 h-4 w-4" /> Exportar CSV
           </Button>
-          <Button onClick={printDoc} disabled={!table || table.rows.length === 0}>
+          <Button
+            onClick={() => printDocument(slug)}
+            disabled={!table || table.rows.length === 0}
+          >
             <Printer className="mr-2 h-4 w-4" /> Baixar PDF
           </Button>
         </div>
@@ -141,7 +94,7 @@ export default function Reports() {
 
       {/* Escolha do relatório: cada cartão diz a PERGUNTA que ele responde, não
           só o nome — "Sell-through" sozinho não avisa para que serve. */}
-      <div className="no-print grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="no-print grid gap-3 sm:grid-cols-2">
         {REPORTS.map((r) => {
           const active = r.key === key
           return (
@@ -204,25 +157,6 @@ export default function Reports() {
             </>
           )}
 
-          {key === 'encalhados' && (
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Sem vender há mais de</Label>
-              <Select
-                value={String(params.minDays)}
-                onValueChange={(v) => set({ minDays: Number(v) })}
-              >
-                <SelectTrigger className="h-control-sm w-[130px] rounded-sm text-[13px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAY_WINDOWS.map((d) => (
-                    <SelectItem key={d} value={String(d)}>{d} dias</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {key === 'posicao' && (
             <div className="flex items-center gap-2 pb-1">
               <Switch
@@ -252,11 +186,6 @@ export default function Reports() {
             </div>
           )}
 
-          {key === 'pedido' && (
-            <p className="text-xs text-muted-foreground">
-              Sem parâmetros: sai do cálculo corrente, igual à tela de Pedido de compra.
-            </p>
-          )}
         </CardContent>
       </Card>
 
@@ -266,11 +195,17 @@ export default function Reports() {
             {(error as Error).message}
           </CardContent>
         </Card>
-      ) : loading || !table ? (
-        <div className="space-y-3">
-          <div className="h-24 animate-pulse rounded-lg bg-surface-inset" />
-          <div className="h-64 animate-pulse rounded-lg bg-surface-inset" />
-        </div>
+      ) : loading ? (
+        <LoadingBlock className="min-h-[320px]" />
+      ) : !table ? (
+        /* Consulta respondeu e mesmo assim não há tabela: não é espera, é
+           ausência de dado. Antes caía no mesmo ramo do carregamento e ficava
+           num esqueleto perpétuo, sem dizer o que fazer. */
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Sem dados para este relatório.
+          </CardContent>
+        </Card>
       ) : (
         /* O documento. Tudo fora daqui some na impressão. */
         <div id="report-doc" className="rounded-lg border bg-white p-6">
@@ -287,10 +222,7 @@ export default function Reports() {
                 a última venda da empresa, não o dia da impressão. */}
             <p className="mt-2 text-xs text-muted-foreground">
               Referência {dmy(referenceDate)}
-              {def.source === 'snapshot' && snapshot
-                ? ` · params v${snapshot.params_version}`
-                : ''}
-              {' · '}gerado em {new Date().toLocaleDateString('pt-BR')} pelo ReporIA
+              {' · '}gerado em {new Date().toLocaleDateString('pt-BR')} pelo BoraRepô
             </p>
           </div>
 

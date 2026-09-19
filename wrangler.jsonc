@@ -2,7 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "stock-linqer",
   "compatibility_date": "2026-09-11",
-  "routes": [{ "pattern": "stock.linqer.com.br", "custom_domain": true }],
+  // O endereço da marca e o endereço antigo, os dois apontando para o mesmo
+  // worker. `stock` fica porque convites já enviados e favoritos do time
+  // apontam para lá — tirá-lo transformaria um link guardado em erro, sem
+  // nada que explicasse para onde o sistema foi.
+  "routes": [
+    { "pattern": "borarepo.linqer.com.br", "custom_domain": true },
+    { "pattern": "stock.linqer.com.br", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   },

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { LogoMark, LogoWordmark } from '@/components/brand/Logo'
 import { DataHealthBanner } from '@/components/health/DataHealthBanner'
 import { NewCompanyDialog } from '@/components/layout/NewCompanyDialog'
 
@@ -115,30 +116,29 @@ export function AppShell({ children }: { children: ReactNode }) {
           collapsed ? 'w-[72px]' : 'w-[248px]',
         )}
       >
-        {/* Ladrilho mono-100 com a marca dentro, como na fonte — o verde vem do
-            ícone, não do fundo. Ladrilho verde cheio competiria com o item
-            ativo logo abaixo, que é a única lavagem de marca da tela. */}
+        {/* A marca, nos dois estados.
+
+            Fechada, só as lâminas, dentro do ladrilho de 44 — a mesma coluna
+            dos itens de navegação, senão o topo da barra desalinha do resto.
+            Aberta, o lockup inteiro, que já traz as lâminas E o nome: repetir o
+            ladrilho ao lado do lockup seria desenhar a marca duas vezes na
+            mesma linha.
+
+            O lockup é uma imagem, não texto — por isso `h-[26px] w-auto` e não
+            um tamanho de fonte. A altura foi escolhida para o "borarepo" bater
+            de topo e base com o rótulo dos itens logo abaixo. */}
         <div
           className={cn(
-            'flex items-center gap-3 px-1 pb-4 pt-1',
-            collapsed && 'justify-center px-0',
+            'flex items-center px-1 pb-4 pt-1',
+            collapsed ? 'justify-center px-0' : 'h-[40px]',
           )}
         >
-          {/* 44 fechada, 40 aberta — os dois números são da fonte (`Rail` usa
-              44, `SidebarNav` usa 40). Fechada, o ladrilho tem que ocupar a
-              mesma coluna de 44 dos itens, ou o topo da barra desalinha. */}
-          <span
-            className={cn(
-              'flex shrink-0 items-center justify-center rounded-nav bg-mono-100',
-              collapsed ? 'h-[44px] w-[44px]' : 'h-[40px] w-[40px]',
-            )}
-          >
-            <Boxes className="h-[24px] w-[24px] text-brand-600" strokeWidth={1.75} />
-          </span>
-          {!collapsed && (
-            <span className="whitespace-nowrap font-display text-lg font-semibold tracking-tight text-foreground">
-              ReporIA
+          {collapsed ? (
+            <span className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-nav bg-mono-100">
+              <LogoMark className="w-[26px] text-brand-600" />
             </span>
+          ) : (
+            <LogoWordmark className="h-[26px] w-auto text-brand-600" />
           )}
         </div>
 

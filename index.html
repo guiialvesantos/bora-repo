@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#055120" />
+    <meta name="theme-color" content="#052DF5" />
     <meta name="color-scheme" content="light" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,15 +17,77 @@
       href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <title>ReporIA — Reposição de estoque</title>
+    <title>BoraRepô — Reposição de estoque</title>
     <meta
       name="description"
-      content="ReporIA: cálculo de estoque de segurança, ponto de pedido, estoque máximo e sugestão de compra por SKU."
+      content="BoraRepô: cálculo de estoque de segurança, ponto de pedido, estoque máximo e sugestão de compra por SKU."
     />
     <meta name="robots" content="noindex, nofollow" />
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      A marca DENTRO do `#root`, e não ao lado dele.
+
+      Entre o HTML chegar e o React montar existe uma janela em que a página é
+      um retângulo branco — é o download do bundle mais a primeira consulta de
+      sessão ao Supabase, o trecho mais longo de espera do sistema e o único que
+      nenhum componente React alcança, porque nessa hora ainda não há React.
+
+      Ficando dentro do `#root`, isto some sozinho: o `createRoot` substitui o
+      conteúdo do nó na primeira renderização. Não há listener para registrar,
+      nem classe para remover, nem o risco clássico de a tela de abertura ficar
+      presa por cima do app quando a remoção falha.
+
+      Tudo em atributo `style` e num `<style>` local, sem classe do Tailwind: a
+      folha do Tailwind é um `<link>` que também está sendo baixado neste
+      instante, então classe nenhuma vale ainda.
+    -->
+    <div id="root">
+      <style>
+        @keyframes boot-slab {
+          0%,
+          100% {
+            opacity: 0;
+            transform: translate(-110px, 90px);
+          }
+          18%,
+          70% {
+            opacity: 1;
+            transform: translate(0, 0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #boot svg path {
+            animation: none;
+            opacity: 1;
+          }
+        }
+      </style>
+      <div
+        id="boot"
+        style="
+          display: flex;
+          min-height: 100vh;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <svg width="76" viewBox="0 0 758 428" fill="#052DF5" aria-label="Carregando" role="status">
+          <path
+            style="animation: boot-slab 1.6s cubic-bezier(0.2, 0, 0, 1) infinite"
+            d="M0 206.707L252.709 0V206.707L0 427.092V206.707Z"
+          />
+          <path
+            style="animation: boot-slab 1.6s cubic-bezier(0.2, 0, 0, 1) 150ms infinite"
+            d="M251.963 206.707L504.672 0V206.707L251.963 427.092V206.707Z"
+          />
+          <path
+            style="animation: boot-slab 1.6s cubic-bezier(0.2, 0, 0, 1) 300ms infinite"
+            d="M504.672 206.707L757.381 0V206.707L504.672 427.092V206.707Z"
+          />
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

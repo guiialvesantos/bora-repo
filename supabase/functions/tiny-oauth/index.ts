@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     .eq('provider', 'tiny_v3')
     .eq('settings->>oauth_state', state)
     .maybeSingle()
-  if (!conn) return new Response('Autorização não reconhecida — reinicie a conexão no ReporIA', { status: 400 })
+  if (!conn) return new Response('Autorização não reconhecida — reinicie a conexão no BoraRepô', { status: 400 })
 
   const settings = (conn.settings ?? {}) as Record<string, unknown>
   const returnTo = typeof settings.return_to === 'string' && settings.return_to
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return returnTo ? redirect(`${returnTo}?tiny_v3=connected`) : new Response('Conectado. Volte ao ReporIA.')
+    return returnTo ? redirect(`${returnTo}?tiny_v3=connected`) : new Response('Conectado. Volte ao BoraRepô.')
   } catch (err) {
     console.error('tiny-oauth', err)
     const reason = err instanceof TinyV3AuthError ? err.message : 'Falha ao concluir a autorização'

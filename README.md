@@ -1,4 +1,4 @@
-# ReporIA — stock.linqer.com.br
+# BoraRepô — borarepo.linqer.com.br
 
 Sistema de reposição de estoque multi-empresa. Substitui a planilha de compra
 da Triana (semijoias): importa vendas, estoque e em-trânsito (Tiny/Olist v2 +
